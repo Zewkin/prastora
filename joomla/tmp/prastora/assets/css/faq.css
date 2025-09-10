@@ -1,0 +1,136 @@
+.faq_wrapper {
+  border-radius: 40px;
+  background: rgb(241, 238, 251);
+  padding: 80px 0 100px;
+  margin-bottom: 100px;
+}
+
+.faq_list {
+  max-width: 1048px;
+  margin: 0 auto;
+
+  margin-bottom: 50px;
+}
+
+.faq_item {
+  border-radius: 40px;
+  padding: 20px 40px;
+  background: rgb(249, 249, 252);
+  margin-bottom: 20px;
+}
+
+.faq_item_title {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.faq_item_title p {
+  /* Long texts Small Subtitle */
+  color: rgb(77, 28, 136);
+  font-family: Mulish;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 130%;
+  letter-spacing: 0px;
+  text-align: left;
+}
+
+.faq_item_icon {
+  border-radius: 20.5px;
+  width: 41px;
+  height: 41px;
+  background: rgb(241, 238, 251);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.faq_item_desciprition p {
+  /* Documents Body text */
+  color: rgb(48, 43, 57);
+  font-family: Mulish;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 130%;
+  letter-spacing: 0px;
+  text-align: left;
+  padding-top: 12px;
+  margin-bottom: 20px;
+}
+
+.faq_item_desciprition p:last-child {
+  margin-bottom: 0;
+}
+
+.faq_item_desciprition {
+  display: none;
+}
+
+.faq_item_active .faq_item_desciprition {
+  display: block;
+}
+
+.faq_item_icon img {
+  transition: all 0.4s ease;
+}
+
+.faq_item_active .faq_item_icon img {
+  transition: all 0.4s ease;
+  transform: rotate(45deg);
+}
+
+.faq_btm p {
+  /* Long texts Small Subtitle */
+  color: rgb(105, 96, 122);
+  font-family: Mulish;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 130%;
+  letter-spacing: 0px;
+  text-align: center;
+}
+
+@media only screen and (max-width: 500px) {
+  .faq_wrapper {
+    padding: 20px;
+    border-radius: 20px;
+    padding-bottom: 30px;
+    margin-bottom: 80px;
+  }
+  .faq_item {
+    border-radius: 20px;
+    padding: 20px;
+    margin-bottom: 10px;
+  }
+  .faq_item_title p {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 130%;
+  }
+  .faq_item_desciprition p {
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 130%;
+  }
+  .faq_item_title {
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  .faq_list {
+    margin-bottom: 80px;
+  }
+  .faq_btm p {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 130%;
+    letter-spacing: 0px;
+    text-align: center;
+  }
+  .faq_item_title p {
+    text-align: left;
+    width: 100%;
+  }
+}
