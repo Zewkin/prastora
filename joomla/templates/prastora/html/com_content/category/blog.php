@@ -2,18 +2,28 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\Content\Site\Helper\RouteHelper as ContentHelperRoute;
 use Joomla\CMS\Categories\Categories;
-use Joomla\Helper\TagsHelper;
+use Joomla\CMS\Helper\TagsHelper;
 
 $app     = Factory::getApplication();
 $template = $app->getTemplate();
 $tplUri  = rtrim(Uri::root(true), '/') . '/templates/' . $template;
 
 $items = $this->items ?? [];
+$tagsHelper = new TagsHelper();
+$tagsCache = [];
+$getItemTags = function (int $itemId) use (&$tagsCache, $tagsHelper) {
+    if (!array_key_exists($itemId, $tagsCache)) {
+        $tagsCache[$itemId] = $tagsHelper->getItemTags('com_content.article', $itemId) ?: [];
+    }
+
+    return $tagsCache[$itemId];
+};
 
 // Filters
 $input     = $app->input;
@@ -54,20 +64,21 @@ if ($fromDate || $toDate) {
 
 // Apply tag filter (by title or alias)
 if ($filterTag !== '') {
-    $tagsHelper = new TagsHelper();
-    $items = array_values(array_filter($items, function ($it) use ($tagsHelper, $filterTag) {
-        $tags = $tagsHelper->getItemTags('com_content.article', (int) $it->id) ?: [];
+    $normalizedTag = mb_strtolower($filterTag);
+    $items = array_values(array_filter($items, function ($it) use ($getItemTags, $normalizedTag, $filterTag) {
+        $tags = $getItemTags((int) $it->id);
         foreach ($tags as $tag) {
-            if (mb_strtolower($tag->title) === mb_strtolower($filterTag) || $tag->alias === $filterTag) {
+            if (mb_strtolower((string) $tag->title) === $normalizedTag || (string) $tag->alias === $filterTag) {
                 return true;
             }
         }
+
         return false;
     }));
 }
 ?>
 <div class="projects_page container">
-	<div class="projects_wrapper">
+	<div class="projects_wrapper project_main">
 		<div class="projects_nav">
 			<div class="projects_nav_menu">
 				<?php
@@ -93,37 +104,82 @@ if ($filterTag !== '') {
 			<div class="projects_nav_action"><img src="<?php echo $tplUri; ?>/assets/icons/nav-ac-2.svg" alt="" /></div>
 		</div>
 
-		<div class="projects_cards news_cards">
+		<div class="projects_cards">
 			<?php foreach ($items as $item) :
 				$images = json_decode($item->images ?? '{}');
 				$introImage = $images->image_intro ?? '';
+				$imageAlt = trim((string) ($images->image_intro_alt ?? ''));
+				$imageSrc = '';
+				if (!empty($introImage)) {
+					$cleanImage = HTMLHelper::cleanImageURL($introImage);
+					if (!empty($cleanImage->url)) {
+						$introImage = $cleanImage->url;
+					}
+					if (strpos($introImage, 'http://') === 0 || strpos($introImage, 'https://') === 0 || strpos($introImage, '//') === 0 || strpos($introImage, '/') === 0) {
+						$imageSrc = $introImage;
+					} else {
+						$imageSrc = rtrim(Uri::root(true), '/') . '/' . ltrim($introImage, '/');
+					}
+				}
+				if ($imageSrc === '') {
+					$imageSrc = $tplUri . '/assets/images/project-img.png';
+				}
+				if ($imageAlt === '') {
+					$imageAlt = (string) $item->title;
+				}
 				$link = Route::_(ContentHelperRoute::getArticleRoute($item->slug, (int) $item->catid, (string) $item->language));
+				$tags = $getItemTags((int) $item->id);
+				$tagLabel = '';
+				if (!empty($tags)) {
+					$firstTag = reset($tags);
+					$firstTagTitle = trim((string) ($firstTag->title ?? ''));
+					$tagLabel = $firstTagTitle !== '' ? $firstTagTitle : trim((string) ($firstTag->alias ?? ''));
+				} elseif (!empty($item->category_title)) {
+					$tagLabel = trim((string) $item->category_title);
+				} elseif (!empty($this->category->title)) {
+					$tagLabel = trim((string) $this->category->title);
+				}
+				$publishDate = '';
+				if (!empty($item->publish_up) || !empty($item->created)) {
+					$publishDate = JHtml::_('date', $item->publish_up ?: $item->created, Text::_('DATE_FORMAT_LC3'));
+				}
+				$rawIntro = trim(strip_tags($item->introtext));
+				$summary = $rawIntro !== '' ? HTMLHelper::_('string.truncate', $rawIntro, 180, true, false) : '';
+				$readMoreLabel = Text::sprintf('COM_CONTENT_READ_MORE_TITLE', str_replace('%', '%%', (string) $item->title));
 			?>
 			<div class="project_card">
 				<div class="project_card_top">
-					<?php if ($introImage) : ?>
-						<a href="<?php echo $link; ?>"><img src="<?php echo htmlspecialchars($introImage, ENT_QUOTES, 'UTF-8'); ?>" alt="" /></a>
-					<?php else : ?>
-						<a href="<?php echo $link; ?>"><img src="<?php echo $tplUri; ?>/assets/images/news-img.png" alt="" /></a>
-					<?php endif; ?>
+					<a href="<?php echo $link; ?>"><img src="<?php echo htmlspecialchars($imageSrc, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($imageAlt, ENT_QUOTES, 'UTF-8'); ?>" /></a>
 					<div class="project_card_desc">
+						<?php if ($tagLabel !== '' || $publishDate !== '') : ?>
 						<div class="project_card_desc_items">
-							<div class="project_hashtag"><p><?php echo htmlspecialchars($this->category->title ?? 'Навіны', ENT_QUOTES, 'UTF-8'); ?></p></div>
+							<?php if ($tagLabel !== '') : ?>
+							<div class="project_hashtag"><p><?php echo htmlspecialchars($tagLabel, ENT_QUOTES, 'UTF-8'); ?></p></div>
+							<?php endif; ?>
+							<?php if ($tagLabel !== '' && $publishDate !== '') : ?>
+							<div class="dot"></div>
+							<?php endif; ?>
+							<?php if ($publishDate !== '') : ?>
+							<span><?php echo htmlspecialchars($publishDate, ENT_QUOTES, 'UTF-8'); ?></span>
+							<?php endif; ?>
 						</div>
-						<div class="news_date">
-							<span><?php echo JHtml::_('date', $item->publish_up ?? $item->created, Text::_('DATE_FORMAT_LC3')); ?></span>
-						</div>
+						<?php endif; ?>
 						<div class="project_card_desc_text">
 							<p><a href="<?php echo $link; ?>"><?php echo htmlspecialchars($item->title, ENT_QUOTES, 'UTF-8'); ?></a></p>
-							<span><a href="<?php echo $link; ?>"><?php echo strip_tags($item->introtext); ?></a></span>
+							<?php if ($summary !== '') : ?>
+							<span><?php echo htmlspecialchars($summary, ENT_QUOTES, 'UTF-8'); ?></span>
+							<?php endif; ?>
 						</div>
 					</div>
 				</div>
 				<div class="project_card_btm"><img src="<?php echo $tplUri; ?>/assets/images/Union.png" alt="" /></div>
-				<a href="<?php echo $link; ?>" class="card_link"><img src="<?php echo $tplUri; ?>/assets/icons/link-f.svg" alt="" /></a>
+				<a href="<?php echo $link; ?>" class="card_link" title="<?php echo htmlspecialchars($readMoreLabel, ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?php echo htmlspecialchars($readMoreLabel, ENT_QUOTES, 'UTF-8'); ?>"><img src="<?php echo $tplUri; ?>/assets/icons/link-f.svg" alt="" /></a>
 			</div>
 			<?php endforeach; ?>
 		</div>
+		<?php if (empty($items)) : ?>
+			<p class="no-projects"><?php echo Text::_('COM_CONTENT_NO_ARTICLES'); ?></p>
+		<?php endif; ?>
 	</div>
 
 	<div class="cards_pagination">

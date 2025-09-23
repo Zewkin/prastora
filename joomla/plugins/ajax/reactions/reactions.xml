@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="ajax" method="upgrade" version="5.0">
+    <name>plg_ajax_reactions</name>
+    <author>Prastora</author>
+    <version>1.0.0</version>
+    <description>AJAX reactions for constitution sections</description>
+    <files>
+        <filename plugin="reactions">reactions.php</filename>
+        <filename>reactions.xml</filename>
+    </files>
+</extension>
+
+

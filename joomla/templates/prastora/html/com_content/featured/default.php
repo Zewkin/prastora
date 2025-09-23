@@ -3,11 +3,120 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Categories\Categories;
+use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\Component\Content\Site\Helper\RouteHelper;
+use Joomla\Database\ParameterType;
 
 $app = Factory::getApplication();
 $doc = $app->getDocument();
 $template = $app->getTemplate();
 $tplUri = rtrim(Uri::root(true), '/') . '/templates/' . $template;
+
+// Action формы поиска: ищем пункт меню com_finder
+$menu = $app->getMenu();
+$searchMenuItem = $menu ? $menu->getItems('link', 'index.php?option=com_finder&view=search', true) : null;
+$searchAction = $searchMenuItem
+	? Route::_('index.php?option=com_finder&view=search&Itemid=' . (int) $searchMenuItem->id)
+	: (rtrim(Uri::base(true), '/') . '/index.php?option=com_finder&view=search');
+
+// Projects category/link
+$projectsMenuItem = $menu ? $menu->getItems('alias', 'projects', true) : null;
+
+$db = Factory::getContainer()->get('DatabaseDriver');
+$projectsCategoryId = (int) $db->setQuery(
+    $db->getQuery(true)
+        ->select($db->quoteName('id'))
+        ->from($db->quoteName('#__categories'))
+        ->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+        ->where($db->quoteName('alias') . ' = ' . $db->quote('projects'))
+        ->setLimit(1)
+)->loadResult();
+
+$projectsIntroFallback = 'Невялікае апісанне праекта. Прастора – гэта адкрытая платформа, дзе беларусы могуць удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.';
+
+if (!$projectsCategoryId) {
+    $projectsCategoryId = (int) $db->setQuery(
+        $db->getQuery(true)
+            ->select($db->quoteName('catid'))
+            ->from($db->quoteName('#__content'))
+            ->where($db->quoteName('alias') . ' = ' . $db->quote('constitution'))
+            ->setLimit(1)
+    )->loadResult();
+}
+
+$newsMenuItem = $menu ? $menu->getItems('alias', 'news', true) : null;
+$newsCategoryId = 0;
+
+if ($newsMenuItem) {
+    if (!empty($newsMenuItem->query['id'])) {
+        $newsCategoryId = (int) $newsMenuItem->query['id'];
+    } elseif (!empty($newsMenuItem->link)) {
+        $linkQuery = [];
+        $queryString = parse_url($newsMenuItem->link, PHP_URL_QUERY);
+        if (!empty($queryString)) {
+            parse_str($queryString, $linkQuery);
+            if (!empty($linkQuery['id'])) {
+                $newsCategoryId = (int) $linkQuery['id'];
+            }
+        }
+    }
+}
+
+if (!$newsCategoryId) {
+    $newsCategoryId = (int) $db->setQuery(
+        $db->getQuery(true)
+            ->select($db->quoteName('id'))
+            ->from($db->quoteName('#__categories'))
+            ->where($db->quoteName('extension') . ' = ' . $db->quote('com_content'))
+            ->where($db->quoteName('alias') . ' = ' . $db->quote('news'))
+            ->setLimit(1)
+    )->loadResult();
+}
+
+$newsCategoryIds = [];
+if ($newsCategoryId) {
+    $newsCategoryIds[] = $newsCategoryId;
+    $categoriesApi = Categories::getInstance('Content');
+    if ($categoriesApi) {
+        $newsCategory = $categoriesApi->get($newsCategoryId);
+        if ($newsCategory) {
+            foreach ($newsCategory->getChildren(true) as $child) {
+                $newsCategoryIds[] = (int) $child->id;
+            }
+        }
+    }
+    $newsCategoryIds = array_values(array_unique(array_map('intval', $newsCategoryIds)));
+}
+
+$projectsLink = $projectsMenuItem
+    ? Route::_($projectsMenuItem->link . '&Itemid=' . (int) $projectsMenuItem->id)
+    : ($projectsCategoryId ? Route::_('index.php?option=com_content&view=category&id=' . $projectsCategoryId . '&layout=projects') : '#');
+
+$projectsItems = [];
+if ($projectsCategoryId) {
+    $query = $db->getQuery(true)
+        ->select([
+            'a.id',
+            'a.title',
+            'a.alias',
+            'a.introtext',
+            'a.images',
+            'a.catid',
+            'a.publish_up',
+            'a.created',
+        ])
+        ->from($db->quoteName('#__content', 'a'))
+        ->where($db->quoteName('a.state') . ' = 1')
+        ->where($db->quoteName('a.catid') . ' = :catid')
+        ->order('COALESCE(a.publish_up, a.created) DESC')
+        ->setLimit(6)
+        ->bind(':catid', $projectsCategoryId, ParameterType::INTEGER);
+    $db->setQuery($query);
+    $projectsItems = $db->loadObjectList() ?: [];
+}
 
 // Подключаем Swiper (CSS/JS)
 $doc->addStyleSheet('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css');
@@ -20,18 +129,22 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 				<div class="nav_left">
 					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
 					<div class="nav_menu">
-						<a href="/constitution"><p>Канстытуцыя</p></a>
-						<a href="/projects"><p>Праекты</p></a>
-						<a href="/news"><p>Навіны</p></a>
-						<a href="/about-us"><p>Пра нас</p></a>
-						<a href="/faq"><p>FAQ</p></a>
+						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
+							<a href="/constitution"><p>Канстытуцыя</p></a>
+							<a href="/projects"><p>Праекты</p></a>
+							<a href="/news"><p>Навіны</p></a>
+							<a href="/about-us"><p>Пра нас</p></a>
+							<a href="/faq"><p>FAQ</p></a>
+						<?php } ?>
 					</div>
 				</div>
 				<div class="nav_right">
-					<div class="nav_search">
+					<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
+						<input type="hidden" name="option" value="com_finder" />
+						<input type="hidden" name="view" value="search" />
 						<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-						<input type="text" placeholder="Пошук..." />
-					</div>
+						<input type="text" name="q" placeholder="Пошук..." />
+					</form>
 					<button class="nav_btn">Donate</button>
 					<button class="nav_btn lang_toggler">BEL</button>
 				</div>
@@ -51,10 +164,12 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 					<a href="/about-us"><p>Пра нас</p></a>
 					<a href="/faq"><p>FAQ</p></a>
 				</div>
-				<div class="nav_search">
+				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
+					<input type="hidden" name="option" value="com_finder" />
+					<input type="hidden" name="view" value="search" />
 					<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-					<input type="text" placeholder="Пошук..." />
-				</div>
+					<input type="text" name="q" placeholder="Пошук..." />
+				</form>
 				<div class="mob_menu_actions">
 					<button class="nav_btn">Donate</button>
 					<button class="nav_btn lang_toggler">BEL</button>
@@ -62,6 +177,7 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 			</div>
 		</div>
 
+		<?php $modsHero = ModuleHelper::getModules('hero'); if (!empty($modsHero)) { foreach ($modsHero as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
 		<div class="header_content">
 			<div class="header_main_title">
 				<h2>мы верым што толькі разам мы</h2>
@@ -84,6 +200,7 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 				</h5>
 			</div>
 		</div>
+		<?php } ?>
 		<div class="header_btm">
 			<p>
 				Беражыце сябе і сваю інфармацыю — прытрымлівайцеся простых правілаў
@@ -98,6 +215,7 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 	</header>
 </div>
 
+<?php $modsA = ModuleHelper::getModules('home-section-a'); if (!empty($modsA)) { foreach ($modsA as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
 <section class="moto_block container">
 	<img src="<?php echo $tplUri; ?>/assets/images/moto-img.png" alt="" />
 	<div class="moto_block_desc">
@@ -114,7 +232,9 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		</p>
 	</div>
 </section>
+<?php } ?>
 
+<?php $modsB = ModuleHelper::getModules('home-section-b'); if (!empty($modsB)) { foreach ($modsB as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
 <div class="how_it_works">
 	<div class="container">
 		<div class="how_it_work_title">
@@ -211,46 +331,71 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		</div>
 	</div>
 </div>
+<?php } ?>
 
+<?php $modsC = ModuleHelper::getModules('home-section-c'); if (!empty($modsC)) { foreach ($modsC as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
 <section class="last_projects container">
 	<div class="block_title"><h2>Апошнія праекты</h2></div>
+	<?php if (!empty($projectsItems)) : ?>
 	<div class="last_project_cards">
+		<?php foreach (array_slice($projectsItems, 0, 2) as $idx => $project) :
+			$link = Route::_(RouteHelper::getArticleRoute($project->id . ':' . $project->alias, (int) $project->catid));
+			$rawIntro = trim(strip_tags($project->introtext));
+			if ($rawIntro === '') {
+				$rawIntro = $projectsIntroFallback;
+			}
+			$summary = HTMLHelper::_('string.truncate', $rawIntro, 180, true, false);
+		?>
 		<div class="last_project_card">
 			<img class="last_project_card_bg" src="<?php echo $tplUri; ?>/assets/images/project-bg.svg" alt="" />
 			<img src="<?php echo $tplUri; ?>/assets/icons/project-icon.svg" alt="" />
 			<div class="last_project_card_descs">
 				<div>
-					<p>Канстытуцыя Новай Беларусі (першая версія)</p>
-					<span>Невялікае апісанне праекта . Прастора – гэта адкрытая платформа, дзе беларусы могуць удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.</span>
+					<p><a href="<?php echo $link; ?>"><?php echo htmlspecialchars($project->title, ENT_QUOTES, 'UTF-8'); ?></a></p>
+					<span><?php echo htmlspecialchars($summary, ENT_QUOTES, 'UTF-8'); ?></span>
 				</div>
-				<a href="/news"><img src="<?php echo $tplUri; ?>/assets/icons/link.svg" alt="" /></a>
+				<a href="<?php echo $link; ?>"><img src="<?php echo $tplUri; ?>/assets/icons/link.svg" alt="" /></a>
 			</div>
 			<div class="last_project_card_slice"></div>
 		</div>
-		<div class="last_project_card">
-			<img class="last_project_card_bg" src="<?php echo $tplUri; ?>/assets/images/project-bg.svg" alt="" />
-			<img src="<?php echo $tplUri; ?>/assets/icons/project-icon.svg" alt="" />
-			<div class="last_project_card_descs">
-				<div>
-					<p>Канстытуцыя Новай Беларусі</p>
-					<span>Невялікае апісанне праекта . Прастора – гэта адкрытая платформа, дзе беларусы могуць удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.</span>
-				</div>
-				<a href="/news"><img src="<?php echo $tplUri; ?>/assets/icons/link.svg" alt="" /></a>
-			</div>
-			<div class="last_project_card_slice"></div>
-		</div>
+		<?php endforeach; ?>
 	</div>
 	<div class="swiper last_project_car">
 		<div class="swiper-wrapper">
-			<div class="swiper-slide"><div class="last_project_card"></div></div>
-			<div class="swiper-slide"><div class="last_project_card"></div></div>
+			<?php foreach ($projectsItems as $project) :
+				$link = Route::_(RouteHelper::getArticleRoute($project->id . ':' . $project->alias, (int) $project->catid));
+				$rawIntro = trim(strip_tags($project->introtext));
+				if ($rawIntro === '') {
+					$rawIntro = $projectsIntroFallback;
+				}
+				$summary = HTMLHelper::_('string.truncate', $rawIntro, 180, true, false);
+			?>
+			<div class="swiper-slide">
+				<div class="last_project_card">
+					<img class="last_project_card_bg" src="<?php echo $tplUri; ?>/assets/images/project-bg.svg" alt="" />
+					<img src="<?php echo $tplUri; ?>/assets/icons/project-icon.svg" alt="" />
+					<div class="last_project_card_descs">
+						<div>
+							<p><a href="<?php echo $link; ?>"><?php echo htmlspecialchars($project->title, ENT_QUOTES, 'UTF-8'); ?></a></p>
+							<span><?php echo htmlspecialchars($summary, ENT_QUOTES, 'UTF-8'); ?></span>
+						</div>
+						<a href="<?php echo $link; ?>"><img src="<?php echo $tplUri; ?>/assets/icons/link.svg" alt="" /></a>
+					</div>
+					<div class="last_project_card_slice"></div>
+				</div>
+			</div>
+			<?php endforeach; ?>
 		</div>
 	</div>
 	<div class="swiper_pagination last_project_car_pag"></div>
+	<?php else : ?>
+	<p class="no-projects">Праекты яшчэ не дададзены.</p>
+	<?php endif; ?>
 	<div class="corner_btn">
-		<a href="#"><button class="line_btn">Больш праектаў <img src="<?php echo $tplUri; ?>/assets/icons/arrow-top-right.svg" alt="" /></button></a>
+		<a href="<?php echo htmlspecialchars($projectsLink, ENT_QUOTES, 'UTF-8'); ?>"><button class="line_btn">Больш праектаў <img src="<?php echo $tplUri; ?>/assets/icons/arrow-top-right.svg" alt="" /></button></a>
 	</div>
 </section>
+<?php } ?>
 
 <section class="news_block container">
 	<div class="block_title"><h2>Навіны</h2></div>
@@ -258,11 +403,16 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		<?php
 			$db = Joomla\CMS\Factory::getDbo();
 			$query = $db->getQuery(true)
-				->select(['a.id','a.title','a.alias','a.introtext','a.catid','a.publish_up','a.images'])
+				->select(['a.id','a.title','a.alias','a.introtext','a.catid','a.publish_up','a.created','a.images'])
 				->from('#__content AS a')
 				->where('a.state = 1')
-				->order('a.publish_up DESC')
+				->order('COALESCE(a.publish_up, a.created) DESC')
 				->setLimit(3);
+			if (!empty($newsCategoryIds)) {
+				$query->where('a.catid IN (' . implode(',', $newsCategoryIds) . ')');
+			} elseif ($projectsCategoryId) {
+				$query->where('a.catid != ' . (int) $projectsCategoryId);
+			}
 			$db->setQuery($query);
 			$rows = $db->loadObjectList() ?: [];
 			foreach ($rows as $row) {
@@ -282,8 +432,14 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		<div class="news_card" style="background-image:url('<?php echo htmlspecialchars($bg, ENT_QUOTES, 'UTF-8'); ?>'); background-size:cover; background-position:center;">
 			<div class="news_card_desc">
 				<h4><a href="<?php echo $link; ?>"><?php echo htmlspecialchars($row->title, ENT_QUOTES, 'UTF-8'); ?></a></h4>
-				<p><?php echo JHtml::_('date', $row->publish_up, 'Y-m-d'); ?></p>
-				<span><a href="<?php echo $link; ?>"><?php echo strip_tags($row->introtext); ?></a></span>
+				<p><?php echo JHtml::_('date', $row->publish_up ?: $row->created, 'Y-m-d'); ?></p>
+				<?php
+					$newsIntro = trim(strip_tags($row->introtext));
+					$newsSummary = $newsIntro !== '' ? HTMLHelper::_('string.truncate', $newsIntro, 180, true, false) : '';
+				?>
+				<?php if ($newsSummary !== '') : ?>
+				<span><a href="<?php echo $link; ?>"><?php echo htmlspecialchars($newsSummary, ENT_QUOTES, 'UTF-8'); ?></a></span>
+				<?php endif; ?>
 			</div>
 			<a href="<?php echo $link; ?>" class="card_link"><img src="<?php echo $tplUri; ?>/assets/icons/link-red.svg" alt="" /></a>
 		</div>

@@ -10,7 +10,7 @@ class JConfig {
 	public $list_limit = 20;
 	public $access = 1;
 	public $frontediting = 1;
-	public $debug = false;
+    public $debug = '1';
 	public $debug_lang = false;
 	public $debug_lang_const = true;
 	public $dbtype = 'mysqli';
@@ -29,7 +29,7 @@ class JConfig {
 	public $live_site = '';
 	public $secret = 'cfDcxCZS4iJTIckZ';
 	public $gzip = false;
-	public $error_reporting = 'default';
+    public $error_reporting = 'maximum';
 	public $helpurl = 'https://help.joomla.org/proxy?keyref=Help{major}{minor}:{keyref}&lang={langcode}';
 	public $offset = 'UTC';
 	public $cors = false;
@@ -56,7 +56,7 @@ class JConfig {
 	public $MetaVersion = false;
 	public $robots = '';
 	public $sef = true;
-	public $sef_rewrite = false;
+    public $sef_rewrite = true;
 	public $sef_suffix = false;
 	public $unicodeslugs = false;
 	public $feed_limit = 10;
@@ -67,4 +67,6 @@ class JConfig {
 	public $session_handler = 'database';
 	public $shared_session = false;
 	public $session_metadata = true;
+	public $redis_server_auth = '';
+	public $session_redis_server_auth = '';
 }

@@ -459,9 +459,12 @@ final class SiteApplication extends CMSApplication
             $templates = $this->bootComponent('templates')->getMVCFactory()
                 ->createModel('Style', 'Administrator')->getSiteTemplates();
 
-            foreach ($templates as &$template) {
-                // Create home element
-                if ($template->home == 1 && !isset($template_home) || $this->getLanguageFilter() && $template->home == $tag) {
+                foreach ($templates as &$template) {
+                // Create home element (support both legacy int(1) and modern '*' / language tag values)
+                $isHomeAny  = ($template->home == 1) || ($template->home === '*');
+                $isHomeLang = ($this->getLanguageFilter() && $template->home == $tag);
+
+                if ((!isset($template_home) && $isHomeAny) || $isHomeLang) {
                     $template_home = clone $template;
                 }
 
@@ -480,7 +483,8 @@ final class SiteApplication extends CMSApplication
             $cache->store($templates, $cacheId);
         }
 
-        $template = $templates[$id] ?? $templates[0];
+        // Pick the template by style id, otherwise fallback to home (0), otherwise first available
+        $template = $templates[$id] ?? ($templates[0] ?? (\is_array($templates) && !empty($templates) ? reset($templates) : null));
 
         // Allows for overriding the active template from the request
         $template_override = $this->input->getCmd('template', '');

@@ -966,7 +966,8 @@ footer {
   text-align: left;
 }
 
-/* Clamp news intro to 4 lines on listing */
+/* Clamp card summaries to 4 lines on listings */
+.projects_cards .project_card_desc_text span,
 .news_cards .project_card_desc_text span {
   display: -webkit-box;
   line-clamp: 4;
@@ -1993,3 +1994,12 @@ footer {
 /* Enforce static spacing for header search */
 .nav_right { gap: 23px; padding-right: 10px; }
 .nav_right .nav_search { margin-right: 20px; }
+
+.no-projects {
+  text-align: center;
+  color: rgb(103, 53, 157);
+  font-family: Mulish;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 20px 0;
+}

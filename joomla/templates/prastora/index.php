@@ -3,24 +3,89 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\CMS\Router\Route;
 
 $app = Factory::getApplication();
 $doc = $app->getDocument();
 $tplUri = rtrim(Uri::root(true), '/') . '/templates/' . $this->template;
 
-// Подключение стилей/скриптов напрямую из шаблона
+// Базовые ассеты подключаем всегда
 $doc->addStyleSheet($tplUri . '/assets/css/main.css');
-$doc->addStyleSheet($tplUri . '/assets/css/constitution.css');
-$doc->addStyleSheet($tplUri . '/assets/css/faq.css');
-$doc->addStyleSheet($tplUri . '/assets/css/about-us.css');
-$doc->addStyleSheet($tplUri . '/assets/css/results.css');
 $doc->addScript($tplUri . '/assets/js/main.js');
-$doc->addScript($tplUri . '/assets/js/constitution.js');
-$doc->addScript($tplUri . '/assets/js/faq.js');
+
+$cssToLoad = [];
+$jsToLoad  = [];
+
+$option = $app->input->getCmd('option', '');
+$view   = $app->input->getCmd('view', '');
+$layout = $app->input->getCmd('layout', '');
+
+$assetMap = [
+	'constitution' => [
+		'css' => ['about-us.css', 'constitution.css'],
+		'js'  => ['constitution.js'],
+	],
+	'faq' => [
+		'css' => ['faq.css'],
+		'js'  => ['faq.js'],
+	],
+	'about-us' => [
+		'css' => ['about-us.css'],
+	],
+];
 
 $menu = $app->getMenu();
 $active = $menu ? $menu->getActive() : null;
+$pageKeys = [];
+
+if ($active && !empty($active->alias)) {
+	$pageKeys[] = (string) $active->alias;
+}
+
+if ($option === 'com_content' && $view === 'article' && $layout === 'constitution') {
+	$pageKeys[] = 'constitution';
+}
+
+if ($option === 'com_finder') {
+	$cssToLoad[] = 'results.css';
+}
+
+foreach (array_unique($pageKeys) as $key) {
+	if (!isset($assetMap[$key])) {
+		continue;
+	}
+	$bundle = $assetMap[$key];
+	if (!empty($bundle['css'])) {
+		$cssToLoad = array_merge($cssToLoad, (array) $bundle['css']);
+	}
+	if (!empty($bundle['js'])) {
+		$jsToLoad = array_merge($jsToLoad, (array) $bundle['js']);
+	}
+}
+
+$cssToLoad = array_values(array_unique($cssToLoad));
+$jsToLoad  = array_values(array_unique($jsToLoad));
+
+foreach ($cssToLoad as $cssFile) {
+    $doc->addStyleSheet($tplUri . '/assets/css/' . $cssFile);
+}
+
+foreach ($jsToLoad as $jsFile) {
+    $doc->addScript($tplUri . '/assets/js/' . $jsFile);
+}
+
 $isHome = $active && !empty($active->home);
+
+// Вычисляем action для формы поиска: пункт меню на com_finder, иначе прямой URL
+$searchMenuItem = $menu ? $menu->getItems('link', 'index.php?option=com_finder&view=search', true) : null;
+$searchAction = $searchMenuItem
+	? Route::_('index.php?option=com_finder&view=search&Itemid=' . (int) $searchMenuItem->id)
+	: (rtrim(Uri::base(true), '/') . '/index.php?option=com_finder&view=search');
+
+if ($option === 'com_finder') {
+	$isHome = false;
+}
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
@@ -42,18 +107,22 @@ $isHome = $active && !empty($active->home);
 				<div class="nav_left">
 					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
 					<div class="nav_menu">
-						<a href="/constitution"><p>Канстытуцыя</p></a>
-						<a href="/projects"><p>Праекты</p></a>
-						<a href="/news"><p>Навіны</p></a>
-						<a href="/about-us"><p>Пра нас</p></a>
-						<a href="/faq"><p>FAQ</p></a>
+						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
+							<a href="/constitution"><p>Канстытуцыя</p></a>
+							<a href="/projects"><p>Праекты</p></a>
+							<a href="/news"><p>Навіны</p></a>
+							<a href="/about-us"><p>Пра нас</p></a>
+							<a href="/faq"><p>FAQ</p></a>
+						<?php } ?>
 					</div>
 				</div>
 				<div class="nav_right">
-					<div class="nav_search">
+					<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
+						<input type="hidden" name="option" value="com_finder" />
+						<input type="hidden" name="view" value="search" />
 						<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-						<input type="text" placeholder="Пошук..." />
-					</div>
+						<input type="text" name="q" placeholder="Пошук..." />
+					</form>
 					<button class="nav_btn">Donate</button>
 					<button class="nav_btn lang_toggler">BEL</button>
 				</div>
@@ -67,16 +136,20 @@ $isHome = $active && !empty($active->home);
 			</div>
 			<div class="mob_menu_content">
 				<div class="nav_menu">
-					<a href="/constitution"><p>Канстытуцыя</p></a>
-					<a href="/projects"><p>Праекты</p></a>
-					<a href="/news"><p>Навіны</p></a>
-					<a href="/about-us"><p>Пра нас</p></a>
-					<a href="/faq"><p>FAQ</p></a>
+					<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
+						<a href="/constitution"><p>Канстытуцыя</p></a>
+						<a href="/projects"><p>Праекты</p></a>
+						<a href="/news"><p>Навіны</p></a>
+						<a href="/about-us"><p>Пра нас</p></a>
+						<a href="/faq"><p>FAQ</p></a>
+					<?php } ?>
 				</div>
-				<div class="nav_search">
+				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
+					<input type="hidden" name="option" value="com_finder" />
+					<input type="hidden" name="view" value="search" />
 					<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-					<input type="text" placeholder="Пошук..." />
-				</div>
+					<input type="text" name="q" placeholder="Пошук..." />
+				</form>
 				<div class="mob_menu_actions">
 					<button class="nav_btn">Donate</button>
 					<button class="nav_btn lang_toggler">BEL</button>

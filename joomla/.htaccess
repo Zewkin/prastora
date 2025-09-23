@@ -30,7 +30,7 @@
 
 ## Can be commented out if causes errors, see notes above.
 Options +FollowSymlinks
-#Options -Indexes
+Options -Indexes
 
 ## No directory listings
 <IfModule mod_autoindex.c>

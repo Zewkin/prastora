@@ -10,6 +10,18 @@ $app     = Factory::getApplication();
 $template = $app->getTemplate();
 $tplUri  = rtrim(Uri::root(true), '/') . '/templates/' . $template;
 $item = $this->item;
+// Если материал относится к Конституции (по alias или категории), используем альтернативный макет
+if (isset($item->alias) && strtolower((string) $item->alias) === 'constitution') {
+    echo $this->loadTemplate('constitution');
+    return;
+}
+if (isset($item->catid)) {
+    $categoryTitle = (string) ($item->category_title ?? '');
+    if (stripos($categoryTitle, 'Канстытуц') !== false || stripos($categoryTitle, 'Конституц') !== false) {
+        echo $this->loadTemplate('constitution');
+        return;
+    }
+}
 $images = json_decode($item->images ?? '{}');
 ?>
 <div class="projects_page container colored_bg">
