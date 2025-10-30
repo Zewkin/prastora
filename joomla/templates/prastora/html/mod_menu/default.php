@@ -12,9 +12,8 @@ foreach ($list as $item) {
     }
     $link  = $item->flink ?? ($item->link ?? '#');
     $title = $item->title ?? '';
-    echo '<a href="' . htmlspecialchars($link, ENT_QUOTES, 'UTF-8') . '"><p>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</p></a>';
+    $linkEsc = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+    $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+    echo '<a href="' . $linkEsc . '"><p data-label="' . $titleEsc . '">' . $titleEsc . '</p></a>';
 }
 echo '</div>';
-
-
-

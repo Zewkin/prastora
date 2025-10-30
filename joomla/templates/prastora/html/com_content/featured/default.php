@@ -7,6 +7,7 @@ use Joomla\CMS\Categories\Categories;
 use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Log\Log;
 use Joomla\Component\Content\Site\Helper\RouteHelper;
 use Joomla\Database\ParameterType;
 
@@ -14,6 +15,124 @@ $app = Factory::getApplication();
 $doc = $app->getDocument();
 $template = $app->getTemplate();
 $tplUri = rtrim(Uri::root(true), '/') . '/templates/' . $template;
+
+if (!function_exists('prastoraResolveMediaUrl')) {
+	function prastoraResolveMediaUrl($value)
+	{
+		$value = $value !== null ? trim((string) $value) : '';
+		if ($value === '') {
+			return '';
+		}
+		$clean = HTMLHelper::cleanImageURL($value);
+		$url = $clean->url ?? $value;
+		if ($url === '') {
+			return '';
+		}
+		if (strpos($url, 'http://') === 0 || strpos($url, 'https://') === 0 || strpos($url, '//') === 0) {
+			return $url;
+		}
+		if ($url[0] === '/') {
+			return rtrim(Uri::root(true), '/') . $url;
+		}
+		return rtrim(Uri::root(true), '/') . '/' . ltrim($url, '/');
+	}
+}
+
+if (!function_exists('prastoraFetchLatestVideo')) {
+	function prastoraFetchLatestVideo(string $channelId, int $cacheMinutes = 60): array
+	{
+		static $runtimeCache = [];
+		$channelId = trim($channelId);
+		if ($channelId === '') {
+			return [];
+		}
+		$cacheMinutes = max(5, $cacheMinutes);
+		$cacheKey = $channelId;
+		$now = time();
+		if (isset($runtimeCache[$cacheKey]) && $runtimeCache[$cacheKey]['expires'] > $now) {
+			return $runtimeCache[$cacheKey]['data'];
+		}
+		try {
+			$feedUrl = 'https://www.youtube.com/feeds/videos.xml?channel_id=' . rawurlencode($channelId);
+			$rawFeed = @file_get_contents($feedUrl);
+			if ($rawFeed === false || $rawFeed === '') {
+				Log::add('Video feed error: unable to download feed for channel ' . $channelId, Log::WARNING, 'tpl_prastora_video');
+				return [];
+			}
+			$xml = @simplexml_load_string($rawFeed);
+			if (!$xml) {
+				Log::add('Video feed parse error for channel ' . $channelId, Log::WARNING, 'tpl_prastora_video');
+				return [];
+			}
+			$xml->registerXPathNamespace('yt', 'http://www.youtube.com/xml/schemas/2015');
+			$xml->registerXPathNamespace('media', 'http://search.yahoo.com/mrss/');
+			$entry = $xml->entry[0] ?? null;
+			if (!$entry) {
+				return [];
+			}
+			$yt = $entry->children('yt', true);
+			$media = $entry->children('media', true);
+			$group = $media ? $media->group : null;
+
+			$videoId = isset($yt->videoId) ? (string) $yt->videoId : '';
+			if ($videoId === '') {
+				return [];
+			}
+
+			$title = (string) ($entry->title ?? '');
+			$description = '';
+			if ($group && isset($group->description)) {
+				$description = (string) $group->description;
+			} elseif (isset($entry->summary)) {
+				$description = (string) $entry->summary;
+			}
+
+			$thumbnail = '';
+			if ($group && isset($group->thumbnail)) {
+				$thumbAttributes = $group->thumbnail[0]->attributes();
+				if ($thumbAttributes && isset($thumbAttributes['url'])) {
+					$thumbnail = (string) $thumbAttributes['url'];
+				}
+			}
+
+			$videoUrl = '';
+			if (isset($entry->link)) {
+				foreach ($entry->link as $link) {
+					$attrs = $link->attributes();
+					if ($attrs && (string) $attrs['rel'] === 'alternate') {
+						$videoUrl = (string) $attrs['href'];
+						break;
+					}
+				}
+			}
+			if ($videoUrl === '') {
+				$videoUrl = 'https://www.youtube.com/watch?v=' . $videoId;
+			}
+
+			$channelUrl = '';
+			if (isset($entry->author) && isset($entry->author->uri)) {
+				$channelUrl = (string) $entry->author->uri;
+			}
+
+			$data = [
+				'videoId' => $videoId,
+				'title' => $title,
+				'description' => $description,
+				'thumbnail' => $thumbnail,
+				'url' => $videoUrl,
+				'channelUrl' => $channelUrl,
+			];
+			$runtimeCache[$cacheKey] = [
+				'expires' => $now + ($cacheMinutes * 60),
+				'data' => $data,
+			];
+			return $data;
+		} catch (\Throwable $e) {
+			Log::add('Video feed exception: ' . $e->getMessage(), Log::WARNING, 'tpl_prastora_video');
+			return [];
+		}
+	}
+}
 
 // Action формы поиска: ищем пункт меню com_finder
 $menu = $app->getMenu();
@@ -130,11 +249,11 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
 					<div class="nav_menu">
 						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-							<a href="/constitution"><p>Канстытуцыя</p></a>
-							<a href="/projects"><p>Праекты</p></a>
-							<a href="/news"><p>Навіны</p></a>
-							<a href="/about-us"><p>Пра нас</p></a>
-							<a href="/faq"><p>FAQ</p></a>
+								<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+								<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+								<a href="/news"><p data-label="Навіны">Навіны</p></a>
+								<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+								<a href="/faq"><p data-label="FAQ">FAQ</p></a>
 						<?php } ?>
 					</div>
 				</div>
@@ -157,13 +276,13 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 				<img onclick="toggleMenu()" src="<?php echo $tplUri; ?>/assets/icons/exit.svg" alt="" />
 			</div>
 			<div class="mob_menu_content">
-				<div class="nav_menu">
-					<a href="/constitution"><p>Канстытуцыя</p></a>
-					<a href="/projects"><p>Праекты</p></a>
-					<a href="/news"><p>Навіны</p></a>
-					<a href="/about-us"><p>Пра нас</p></a>
-					<a href="/faq"><p>FAQ</p></a>
-				</div>
+					<div class="nav_menu">
+						<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+						<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+						<a href="/news"><p data-label="Навіны">Навіны</p></a>
+						<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+						<a href="/faq"><p data-label="FAQ">FAQ</p></a>
+					</div>
 				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
 					<input type="hidden" name="option" value="com_finder" />
 					<input type="hidden" name="view" value="search" />
@@ -402,10 +521,15 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 	<div class="news_cards">
 		<?php
 			$db = Joomla\CMS\Factory::getDbo();
+			$nowSql = Factory::getDate()->toSql();
+			$nullDate = $db->getNullDate();
 			$query = $db->getQuery(true)
 				->select(['a.id','a.title','a.alias','a.introtext','a.catid','a.publish_up','a.created','a.images'])
 				->from('#__content AS a')
 				->where('a.state = 1')
+				// Exclude future-dated or expired articles so the links do not 404.
+				->where('(a.publish_up IS NULL OR a.publish_up = ' . $db->quote($nullDate) . ' OR a.publish_up <= ' . $db->quote($nowSql) . ')')
+				->where('(a.publish_down IS NULL OR a.publish_down = ' . $db->quote($nullDate) . ' OR a.publish_down >= ' . $db->quote($nowSql) . ')')
 				->order('COALESCE(a.publish_up, a.created) DESC')
 				->setLimit(3);
 			if (!empty($newsCategoryIds)) {
@@ -457,18 +581,105 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		<a href="/news"><button class="line_btn">Усе Навіны <img src="<?php echo $tplUri; ?>/assets/icons/arrow-top-right.svg" alt="" /></button></a>
 	</div>
 </section>
+<?php
+	$templateParams = $app->getTemplate(true)->params;
+	$videoChannelId = trim((string) $templateParams->get('video_channel_id', ''));
+	$videoCacheMinutes = (int) $templateParams->get('video_cache_minutes', 60);
+	$videoData = [];
+	if ($videoChannelId !== '') {
+		$videoData = prastoraFetchLatestVideo($videoChannelId, $videoCacheMinutes);
+	}
+
+	$fallbackVideoId = trim((string) $templateParams->get('video_fallback_video_id', ''));
+	if (empty($videoData) && $fallbackVideoId !== '') {
+		$videoData = [
+			'videoId' => $fallbackVideoId,
+			'title' => '',
+			'description' => '',
+			'thumbnail' => '',
+			'url' => 'https://www.youtube.com/watch?v=' . $fallbackVideoId,
+			'channelUrl' => '',
+		];
+	}
+
+	$overrideTitle = trim((string) $templateParams->get('video_fallback_title', ''));
+	$overrideDescription = trim((string) $templateParams->get('video_fallback_description', ''));
+	if ($overrideTitle !== '') {
+		$videoData['title'] = $overrideTitle;
+	}
+	if ($overrideDescription !== '') {
+		$videoData['description'] = $overrideDescription;
+	}
+
+	$defaultTitle = 'Назва Відэа';
+	$defaultDescription = 'Невялікае апісанне відэа. Прастора – гэта адкрытая платформа, дзе беларусы могуць удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.';
+
+	$videoId = trim((string) ($videoData['videoId'] ?? ''));
+	$videoTitle = trim((string) ($videoData['title'] ?? ''));
+	if ($videoTitle === '') {
+		$videoTitle = $defaultTitle;
+	}
+	$videoDescription = trim((string) ($videoData['description'] ?? ''));
+	if ($videoDescription === '') {
+		$videoDescription = $defaultDescription;
+	}
+	$videoDescription = strip_tags($videoDescription);
+	$videoDescriptionShort = HTMLHelper::_('string.truncate', $videoDescription, 220, true, false);
+
+	$channelUrlParam = trim((string) $templateParams->get('video_channel_url', ''));
+	$channelUrl = $channelUrlParam !== '' ? $channelUrlParam : trim((string) ($videoData['channelUrl'] ?? ''));
+	if ($channelUrl === '' && $videoChannelId !== '') {
+		$channelUrl = 'https://www.youtube.com/channel/' . $videoChannelId;
+	}
+	if ($channelUrl === '') {
+		$channelUrl = '#';
+	}
+
+	$videoUrl = trim((string) ($videoData['url'] ?? ''));
+	if ($videoUrl === '' && $videoId !== '') {
+		$videoUrl = 'https://www.youtube.com/watch?v=' . $videoId;
+	}
+	if ($channelUrl === '#' && $videoUrl !== '') {
+		$channelUrl = $videoUrl;
+	}
+
+	$videoThumbnail = trim((string) ($videoData['thumbnail'] ?? ''));
+	$fallbackThumbnailParam = $templateParams->get('video_fallback_thumbnail');
+	if (!empty($fallbackThumbnailParam)) {
+		$videoThumbnail = prastoraResolveMediaUrl($fallbackThumbnailParam);
+	}
+	if ($videoThumbnail === '' && $videoId !== '') {
+		$videoThumbnail = 'https://i.ytimg.com/vi/' . rawurlencode($videoId) . '/hqdefault.jpg';
+	}
+
+	$embedUrl = $videoId !== '' ? 'https://www.youtube.com/embed/' . rawurlencode($videoId) . '?autoplay=1&rel=0' : '';
+	$overlayStyle = $videoThumbnail !== '' ? ' style="background-image:url(' . htmlspecialchars($videoThumbnail, ENT_QUOTES, 'UTF-8') . ');"' : '';
+	$hasPlayableVideo = $embedUrl !== '';
+	$playButtonLabel = 'Прайграць відэа «' . $videoTitle . '»';
+?>
 
 <div class="video_block">
 	<div class="video_block_wrapper">
-		<div class="video_player">
-			<div class="video_play_btn"><img src="<?php echo $tplUri; ?>/assets/icons/play.svg" alt="" /></div>
+		<div class="video_player"<?php echo $hasPlayableVideo ? ' data-video-player data-video-playing="0" data-video-embed="' . htmlspecialchars($embedUrl, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
+			<div class="video_frame_holder" data-video-frame></div>
+			<div class="video_player_overlay" data-video-overlay<?php echo $overlayStyle; ?>>
+				<?php if ($hasPlayableVideo) : ?>
+				<button type="button" class="video_play_btn" data-video-play aria-label="<?php echo htmlspecialchars($playButtonLabel, ENT_QUOTES, 'UTF-8'); ?>">
+					<img src="<?php echo $tplUri; ?>/assets/icons/play.svg" alt="" />
+				</button>
+				<?php else : ?>
+				<span class="video_play_btn" aria-hidden="true">
+					<img src="<?php echo $tplUri; ?>/assets/icons/play.svg" alt="" />
+				</span>
+				<?php endif; ?>
+			</div>
 		</div>
 		<div class="video_block_desc">
 			<div>
-				<p>Назва Відэа</p>
-				<span>Невялікае апісанне відэа. Прастора – гэта адкрытая платформа, дзе беларусы могуць удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.</span>
+				<p><?php echo htmlspecialchars($videoTitle, ENT_QUOTES, 'UTF-8'); ?></p>
+				<span><?php echo nl2br(htmlspecialchars($videoDescriptionShort, ENT_QUOTES, 'UTF-8')); ?></span>
 			</div>
-			<button class="line_btn">YouTube <img src="<?php echo $tplUri; ?>/assets/icons/arrow-top-right.svg" alt="" /></button>
+			<a class="line_btn" href="<?php echo htmlspecialchars($channelUrl, ENT_QUOTES, 'UTF-8'); ?>"<?php echo $channelUrl !== '#' ? ' target="_blank" rel="noopener"' : ''; ?>>YouTube <img src="<?php echo $tplUri; ?>/assets/icons/arrow-top-right.svg" alt="" /></a>
 		</div>
 		<div class="video_copyright"><p>*Беражыце сябе і сваю інфармацыю — прытрымлівайцеся простых правілаў анлайн-бяспекі.</p></div>
 	</div>

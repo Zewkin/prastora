@@ -31,11 +31,11 @@ $searchAction = $searchMenuItem
 					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
 					<div class="nav_menu">
 						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-							<a href="/constitution"><p>Канстытуцыя</p></a>
-							<a href="/projects"><p>Праекты</p></a>
-							<a href="/news"><p>Навіны</p></a>
-							<a href="/about-us"><p>Пра нас</p></a>
-							<a href="/faq"><p>FAQ</p></a>
+								<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+								<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+								<a href="/news"><p data-label="Навіны">Навіны</p></a>
+								<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+								<a href="/faq"><p data-label="FAQ">FAQ</p></a>
 						<?php } ?>
 					</div>
 				</div>
@@ -60,11 +60,11 @@ $searchAction = $searchMenuItem
 			<div class="mob_menu_content">
 				<div class="nav_menu">
 					<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-						<a href="/constitution"><p>Канстытуцыя</p></a>
-						<a href="/projects"><p>Праекты</p></a>
-						<a href="/news"><p>Навіны</p></a>
-						<a href="/about-us"><p>Пра нас</p></a>
-						<a href="/faq"><p>FAQ</p></a>
+							<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+							<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+							<a href="/news"><p data-label="Навіны">Навіны</p></a>
+							<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+							<a href="/faq"><p data-label="FAQ">FAQ</p></a>
 					<?php } ?>
 				</div>
 				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">

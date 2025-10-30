@@ -24,4 +24,17 @@
 		<position>footer</position>
 		<position>footer-bottom</position>
 	</positions>
+	<config>
+		<fields name="params">
+			<fieldset name="video" label="Video block settings">
+				<field name="video_channel_id" type="text" label="YouTube Channel ID" description="ID канала YouTube, напрыклад UCxxxxxxxx." />
+				<field name="video_channel_url" type="url" label="Ссылка на канал" description="Поўная спасылка на канал, якая будзе выкарыстоўвацца для кнопкі." />
+				<field name="video_fallback_video_id" type="text" label="Fallback video ID" description="Відэа, якое будзе выкарыстана, калі не атрымалася атрымаць апошняе з канала." />
+				<field name="video_fallback_title" type="text" label="Fallback title" description="Загаловак, які выкарыстоўваецца, калі не атрымалася загрузіць дадзеныя альбо трэба перазапісаць назву." />
+				<field name="video_fallback_description" type="textarea" label="Fallback description" description="Апісанне відэа па змаўчанні." rows="4" />
+				<field name="video_fallback_thumbnail" type="media" label="Fallback thumbnail" description="Выява дастатковага памеру для плэйса." />
+				<field name="video_cache_minutes" type="number" default="60" label="Cache lifetime" description="Колькі хвілін кэшаваць інфармацыю пра відэа. Мінімум 5 хвілін." />
+			</fieldset>
+		</fields>
+	</config>
 </extension>

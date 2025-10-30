@@ -22,6 +22,17 @@ if (isset($item->catid)) {
         return;
     }
 }
+$alias = isset($item->alias) ? strtolower((string) $item->alias) : '';
+$specialLayouts = [
+    'about-us' => 'about',
+    'faq' => 'faq',
+    'privacy-policy' => 'privacy',
+];
+
+if ($alias && isset($specialLayouts[$alias])) {
+    echo $this->loadTemplate($specialLayouts[$alias]);
+    return;
+}
 $images = json_decode($item->images ?? '{}');
 ?>
 <div class="projects_page container colored_bg">

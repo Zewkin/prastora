@@ -15,82 +15,196 @@ if (!$item || !\is_object($item)) {
     echo '<div class="container"><div class="colored_w"><p>Article not found.</p></div></div>';
     return;
 }
+
 $rawHtml = (string) (($item->text ?? '') !== '' ? $item->text : ($item->fulltext ?? ''));
+$introHeaderHtml = trim((string) ($item->introtext ?? ''));
+if ($introHeaderHtml !== '') {
+    $normalizedIntro = preg_replace('/\s+/u', ' ', trim(strip_tags($introHeaderHtml)));
+    $normalizedFull  = preg_replace('/\s+/u', ' ', trim(strip_tags($rawHtml)));
+    if ($normalizedIntro !== '' && $normalizedIntro === $normalizedFull) {
+        $introHeaderHtml = '';
+    }
+}
 
-// Extract chapters (<h4> without class "article-title") and nested articles (<h4 class="article-title">)
+$normalizeHeading = static function (string $html, string $fallback): string {
+    $value = $html !== '' ? $html : htmlspecialchars($fallback, ENT_QUOTES, 'UTF-8');
+    $value = preg_replace('#^(?:\s*<br\s*/?>)+#i', '', $value);
+    $value = preg_replace('#(?:<br\s*/?>\s*)+$#i', '', $value);
+    if (trim(strip_tags($value)) === '') {
+        $value = htmlspecialchars($fallback, ENT_QUOTES, 'UTF-8');
+    }
+    return $value;
+};
+
+$makeId = static function (string $text, array &$used, string $prefix): string {
+    if (!function_exists('mb_strtolower')) {
+        $text = strtolower($text);
+    } else {
+        $text = mb_strtolower($text, 'UTF-8');
+    }
+    $text = preg_replace('/[^\\p{L}\\p{Nd}]+/u', '-', $text);
+    $text = trim($text, '-');
+    if ($text === '') {
+        $text = $prefix;
+    } else {
+        $text = $prefix . '-' . $text;
+    }
+
+    $candidate = $text;
+    $suffix = 2;
+    while (in_array($candidate, $used, true)) {
+        $candidate = $text . '-' . $suffix++;
+    }
+
+    $used[] = $candidate;
+
+    return $candidate;
+};
+
 $sections = [];
-if ($rawHtml !== '') {
-    $pattern = '#(<h4[^>]*>.*?</h4>)#isu';
-    $chunks = preg_split($pattern, $rawHtml, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+$prefaceHtml = '';
 
-    $currentChapterIndex = null;
-    $currentArticleIndex = null;
+$usedSectionIds = [];
+$usedArticleIds = [];
+$currentSectionIndex = null;
+$currentArticleIndex = null;
 
-    foreach ($chunks as $chunk) {
-        $chunk = trim($chunk);
-        if ($chunk === '') {
-            continue;
+$pattern = '#(<h[24][^>]*>.*?</h[24]>)#isu';
+$tokens = preg_split($pattern, $rawHtml, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+foreach ($tokens as $token) {
+    $trimmedToken = trim($token);
+
+    if ($trimmedToken === '') {
+        continue;
+    }
+
+    if (preg_match('#^<h2[^>]*>.*</h2>$#isu', $trimmedToken)) {
+        preg_match('#<h2[^>]*>(.*?)</h2>#isu', $trimmedToken, $hm);
+        $titleInner = trim($hm[1] ?? '');
+        $titleText  = trim(strip_tags($titleInner));
+        $sectionId  = $makeId($titleText !== '' ? $titleText : 'section', $usedSectionIds, 'chapter');
+
+        $sections[] = [
+            'id' => $sectionId,
+            'title' => $titleText,
+            'titleHtml' => $titleInner,
+            'introHtml' => '',
+            'articles' => [],
+        ];
+
+        $currentSectionIndex = count($sections) - 1;
+        $currentArticleIndex = null;
+        continue;
+    }
+
+    if (preg_match('#^<h4[^>]*>.*</h4>$#isu', $trimmedToken)) {
+        preg_match('#<h4[^>]*>(.*?)</h4>#isu', $trimmedToken, $hm4);
+        $articleInner = trim($hm4[1] ?? '');
+        $articleText  = trim(strip_tags($articleInner));
+
+        if ($currentSectionIndex === null) {
+            $sectionId = $makeId($articleText !== '' ? $articleText : 'section', $usedSectionIds, 'chapter');
+            $sections[] = [
+                'id' => $sectionId,
+                'title' => $articleText,
+                'titleHtml' => $articleInner,
+                'introHtml' => '',
+                'articles' => [],
+            ];
+            $currentSectionIndex = count($sections) - 1;
         }
 
-        if (stripos($chunk, '<h4') === 0) {
-            preg_match('#<h4[^>]*>(.*?)</h4>#isu', $chunk, $hm);
-            $titleHtml = trim($hm[1] ?? '');
-            $titleText = trim(strip_tags($titleHtml));
+        $articleId = $makeId($articleText !== '' ? $articleText : 'article', $usedArticleIds, 'article');
+        $sections[$currentSectionIndex]['articles'][] = [
+            'id' => $articleId,
+            'title' => $articleText,
+            'titleHtml' => $articleInner,
+            'html' => '',
+        ];
+        $currentArticleIndex = count($sections[$currentSectionIndex]['articles']) - 1;
+        continue;
+    }
 
-            $classAttr = '';
-            if (preg_match('#class\s*=\s*"([^"]*)"#i', $chunk, $cm)) {
-                $classAttr = strtolower($cm[1]);
-            } elseif (preg_match("#class\s*=\s*'([^']*)'#i", $chunk, $cm)) {
-                $classAttr = strtolower($cm[1]);
-            }
-
-            $base = preg_replace('~[^\p{L}\p{Nd}]+~u', '-', $titleText);
-            $base = function_exists('mb_strtolower') ? mb_strtolower($base, 'UTF-8') : strtolower($base);
-            $slug = trim($base, '-') ?: ('sec-' . (count($sections) + 1));
-
-            if (strpos($classAttr, 'article-title') !== false) {
-                if ($currentChapterIndex === null) {
-                    // Skip orphan article titles
-                    continue;
-                }
-                $sections[$currentChapterIndex]['articles'][] = [
-                    'id' => 'article-' . ($slug ?: ('item-' . (count($sections[$currentChapterIndex]['articles']) + 1))),
-                    'title' => $titleText,
-                    'titleHtml' => $titleHtml,
-                    'html' => '',
-                ];
-                $currentArticleIndex = count($sections[$currentChapterIndex]['articles']) - 1;
-            } else {
-                $chapterAnchor = 'chapter-' . ($slug ?: (string) (count($sections) + 1));
-                $sections[] = [
-                    'id' => $chapterAnchor,
-                    'title' => $titleText,
-                    'titleHtml' => $titleHtml,
-                    'introHtml' => '',
-                    'articles' => [],
-                ];
-                $currentChapterIndex = count($sections) - 1;
-                $currentArticleIndex = null;
-            }
+    if ($currentSectionIndex !== null) {
+        if ($currentArticleIndex !== null) {
+            $sections[$currentSectionIndex]['articles'][$currentArticleIndex]['html'] .= $token;
         } else {
-            if ($currentChapterIndex === null) {
-                continue;
-            }
-            if ($currentArticleIndex !== null) {
-                $sections[$currentChapterIndex]['articles'][$currentArticleIndex]['html'] .= $chunk;
-            } else {
-                $sections[$currentChapterIndex]['introHtml'] .= $chunk;
-            }
+            $sections[$currentSectionIndex]['introHtml'] .= $token;
+        }
+    } else {
+        $prefaceHtml .= $token;
+    }
+}
+
+$prefaceHtml = trim($prefaceHtml);
+
+if ($prefaceHtml !== '' && empty($sections)) {
+    $sectionId = $makeId('preface', $usedSectionIds, 'chapter');
+    $articleId = $makeId('preface', $usedArticleIds, 'article');
+    $fallbackTitle = trim(strip_tags($prefaceHtml));
+
+    $sections[] = [
+        'id' => $sectionId,
+        'title' => $fallbackTitle,
+        'titleHtml' => $fallbackTitle,
+        'introHtml' => '',
+        'articles' => [
+            [
+                'id' => $articleId,
+                'title' => $fallbackTitle,
+                'titleHtml' => $fallbackTitle,
+                'html' => $prefaceHtml,
+            ],
+        ],
+    ];
+    $prefaceHtml = '';
+}
+
+foreach ($sections as $secIdx => $section) {
+    $sections[$secIdx]['introHtml'] = trim($section['introHtml']);
+
+    if (empty($section['articles'])) {
+        $content = $sections[$secIdx]['introHtml'];
+        if ($content !== '') {
+            $articleId = $makeId($section['title'] !== '' ? $section['title'] : 'article', $usedArticleIds, 'article');
+            $sections[$secIdx]['articles'][] = [
+                'id' => $articleId,
+                'title' => $section['title'],
+                'titleHtml' => $section['titleHtml'],
+                'html' => $content,
+            ];
+            $sections[$secIdx]['introHtml'] = '';
         }
     }
 
-    // Trim accumulated HTML
-    foreach ($sections as $cIdx => $chapter) {
-        $sections[$cIdx]['introHtml'] = trim($chapter['introHtml']);
-        foreach ($chapter['articles'] as $aIdx => $article) {
-            $sections[$cIdx]['articles'][$aIdx]['html'] = trim($article['html']);
+    foreach ($sections[$secIdx]['articles'] as $aIdx => $article) {
+        $sections[$secIdx]['articles'][$aIdx]['html'] = trim($article['html']);
+        if ($sections[$secIdx]['articles'][$aIdx]['title'] === '' && $article['titleHtml'] !== '') {
+            $sections[$secIdx]['articles'][$aIdx]['title'] = trim(strip_tags($article['titleHtml']));
         }
     }
+}
+
+if (empty($sections)) {
+    $sectionId = $makeId('article', $usedSectionIds, 'chapter');
+    $articleId = $makeId('article', $usedArticleIds, 'article');
+    $fallbackTitle = trim(strip_tags($rawHtml));
+
+    $sections[] = [
+        'id' => $sectionId,
+        'title' => $fallbackTitle,
+        'titleHtml' => $fallbackTitle,
+        'introHtml' => '',
+        'articles' => [
+            [
+                'id' => $articleId,
+                'title' => $fallbackTitle,
+                'titleHtml' => $fallbackTitle,
+                'html' => $rawHtml,
+            ],
+        ],
+    ];
 }
 ?>
 <div class="about_header container cons_header">
@@ -100,8 +214,8 @@ if ($rawHtml !== '') {
                 <h1><?php echo htmlspecialchars($item->title, ENT_QUOTES, 'UTF-8'); ?></h1>
             </div>
             <div class="cons_btm">
-                <?php if (trim(strip_tags($item->introtext)) !== '') : ?>
-                    <?php echo $item->introtext; ?>
+                <?php if ($introHeaderHtml !== '') : ?>
+                    <?php echo $introHeaderHtml; ?>
                 <?php endif; ?>
                 <div class="header_actions">
                   <a href="#"><button class="main_btn"><?php echo Text::_('Даведацца Больш'); ?></button></a>
@@ -131,15 +245,17 @@ if ($rawHtml !== '') {
         <div class="articles_list">
             <h3>Змест</h3>
             <?php foreach ($sections as $secIdx => $sec) : ?>
-            <div class="articles_list_item<?php echo $secIdx === 0 ? ' articles_list_item_active' : ''; ?>">
+            <div class="articles_list_item<?php echo $secIdx === 0 ? ' articles_list_item_active' : ''; ?>" data-section-id="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="articles_list_item_title" data-target="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                    <p><?php echo htmlspecialchars($sec['title'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p><?php echo htmlspecialchars($sec['title'] !== '' ? $sec['title'] : Text::_('JGLOBAL_ARTICLES'), ENT_QUOTES, 'UTF-8'); ?></p>
                     <img src="<?php echo $tplUri; ?>/assets/icons/article-icon.svg" alt="" />
                 </div>
                 <?php if (!empty($sec['articles'])) : ?>
                 <div class="articles_list_item_desc">
                   <?php foreach ($sec['articles'] as $article) : ?>
+                    <?php if (trim($article['title']) !== '') : ?>
                     <p data-target="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($article['title'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php endif; ?>
                   <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
@@ -149,19 +265,26 @@ if ($rawHtml !== '') {
     </div>
 
     <div class="article_block" id="constitution-content">
+        <?php if ($prefaceHtml !== '' && !empty($sections)) : ?>
+        <div class="article_block_preface" id="constitution-preface">
+            <?php echo $prefaceHtml; ?>
+        </div>
+        <?php endif; ?>
         <?php foreach ($sections as $sec) : ?>
         <?php foreach ($sec['articles'] as $articleIndex => $article) : ?>
         <div class="article_block_item" id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
             <?php if ($articleIndex === 0) : ?>
             <div class="article_chapter_title" id="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                <h2><?php echo $sec['titleHtml']; ?></h2>
+                <?php $chapterHeading = $normalizeHeading($sec['titleHtml'], $sec['title']); ?>
+                <h2><?php echo $chapterHeading; ?></h2>
                 <?php if (!empty($sec['introHtml'])) : ?>
                 <div class="article_chapter_intro"><?php echo $sec['introHtml']; ?></div>
                 <?php endif; ?>
             </div>
             <?php endif; ?>
             <div class="article_block_item_title">
-                <h4><?php echo $article['titleHtml']; ?></h4>
+                <?php $articleHeading = $normalizeHeading($article['titleHtml'], $article['title']); ?>
+                <h4><?php echo $articleHeading; ?></h4>
                 <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
                     <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
@@ -182,11 +305,44 @@ if ($rawHtml !== '') {
     </div>
 
     <div class="comments_block">
-        <div class="auth_comment">
+        <div class="auth_comment" style="display: none;">
             <input type="text" placeholder="Ананімны Карыстальнік" />
             <input type="text" placeholder="Дадаць пошту" />
             <input type="text" placeholder="На маю думку тут лепей казаць што..." />
             <div class="send_btn"><button class="main_btn">Каментаваць</button></div>
+        </div>
+        <div class="comments_list">
+            <div class="comment_list_title">
+                <img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" />Усе Каментары
+            </div>
+            <div class="comment_item">
+                <div class="comment_item_header">
+                    <span class="comment_item_header_name">Sophie</span>
+                </div>
+                <div class="comment_item_content">
+                    This article is the foundation of our legislative process. It clearly defines where the power to make laws resides, ensuring a structured and balanced government.
+                </div>
+                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
+                    <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
+                    <div class="article_reaction"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
+                    <div class="article_reaction article_commenting"><p><?php echo Text::_('Каментаваць'); ?></p></div>
+                </div>
+            </div>
+            <div class="comment_item">
+                <div class="comment_item_header">
+                    <span class="comment_item_header_name">Sophie</span>
+                </div>
+                <div class="comment_item_content">
+                    This article is the foundation of our legislative process. It clearly defines where the power to make laws resides, ensuring a structured and balanced government.
+                </div>
+                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
+                    <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
+                    <div class="article_reaction"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
+                    <div class="article_reaction article_commenting"><p><?php echo Text::_('Каментаваць'); ?></p></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -199,105 +355,3 @@ if ($rawHtml !== '') {
     <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-3.svg" alt="" /></div><p>Усе Каментары</p></div>
 </div>
 
-<script>
-(function(){
-    const toc = document.querySelector('.articles_list');
-    const search = document.getElementById('tocSearch');
-    const titleItems = toc ? toc.querySelectorAll('.articles_list_item_title') : [];
-    const subItems = toc ? toc.querySelectorAll('.articles_list_item_desc p') : [];
-    const articleContainer = document.getElementById('constitution-content');
-
-    function scrollToId(id){
-        const target = document.getElementById(id);
-        if (!target) {
-            return;
-        }
-        if (articleContainer) {
-            const offset = target.getBoundingClientRect().top - articleContainer.getBoundingClientRect().top + articleContainer.scrollTop;
-            articleContainer.scrollTo({ top: offset, behavior: 'smooth' });
-        } else {
-            window.scrollTo({ top: target.getBoundingClientRect().top + window.pageYOffset - 80, behavior: 'smooth' });
-        }
-    }
-
-    titleItems.forEach(function(el){
-        el.addEventListener('click', function(){ scrollToId(this.getAttribute('data-target')); });
-    });
-    subItems.forEach(function(el){
-        el.addEventListener('click', function(){ scrollToId(this.getAttribute('data-target')); });
-    });
-
-    if (search) {
-        search.addEventListener('input', function(){
-            const q = this.value.toLowerCase();
-            toc.querySelectorAll('.articles_list_item').forEach(function(li){
-                const t = (li.querySelector('.articles_list_item_title p')?.textContent || '').toLowerCase();
-                li.style.display = t.indexOf(q) !== -1 ? '' : 'none';
-            });
-        });
-    }
-    // Reactions with localStorage per article+section
-    const reactionBlocks = document.querySelectorAll('.article_reactions');
-
-    const extractRows = (json) => {
-        if (!json) { return {}; }
-        if (json.rows) { return json.rows; }
-        if (json.data && json.data.rows) { return json.data.rows; }
-        return {};
-    };
-
-    reactionBlocks.forEach(function(block){
-        const aid = block.getAttribute('data-article-id');
-        const sid = block.getAttribute('data-section-id');
-        const likeCount = block.querySelector('[data-role="count-like"]');
-        const dislikeCount = block.querySelector('[data-role="count-dislike"]');
-        const likeButton = block.querySelector('[data-role="reaction-like"]');
-        const dislikeButton = block.querySelector('[data-role="reaction-dislike"]');
-        // initial fetch
-        fetch(`index.php?option=com_ajax&plugin=reactions&format=json&group=ajax&task=get&article_id=${aid}&sections=${encodeURIComponent(sid)}`, { credentials: 'same-origin' })
-            .then(r=>r.json()).then(json=>{
-                if (json && json.ok === false && json.error) {
-                    console.warn('Reactions fetch error', json.error);
-                    return;
-                }
-                const rows = extractRows(json);
-                const row = rows && rows[sid] ? rows[sid] : null;
-                likeCount.textContent = row ? (row.likes ?? 0) : 0;
-                dislikeCount.textContent = row ? (row.dislikes ?? 0) : 0;
-            }).catch(()=>{});
-        function vote(type){
-            const form = new FormData();
-            form.append('option','com_ajax');
-            form.append('plugin','reactions');
-            form.append('group','ajax');
-            form.append('format','json');
-            form.append('<?php echo Factory::getApplication()->getFormToken(); ?>', 1);
-            form.append('task','vote');
-            form.append('article_id', aid);
-            form.append('section_id', sid);
-            form.append('type', type);
-            fetch('index.php', { method:'POST', body: form, credentials:'same-origin' })
-                .then(r=>r.json()).then(json=>{
-                    if (json && json.ok) {
-                        if (typeof json.likes !== 'undefined') {
-                            likeCount.textContent = json.likes;
-                        }
-                        if (typeof json.dislikes !== 'undefined') {
-                            dislikeCount.textContent = json.dislikes;
-                        }
-                        return;
-                    }
-                    if (json && json.error === 'already_voted') {
-                        alert('Вы ўжо галасавалі за гэты раздзел.');
-                    }
-                }).catch(()=>{});
-        }
-        if (likeButton) {
-            likeButton.addEventListener('click', function(){ vote('like'); });
-        }
-        if (dislikeButton) {
-            dislikeButton.addEventListener('click', function(){ vote('dislike'); });
-        }
-    });
-})();
-</script>

@@ -76,6 +76,32 @@ if ($filterTag !== '') {
         return false;
     }));
 }
+
+$pagination = $this->pagination ?? null;
+$limit      = 9;
+$totalItems = (is_object($pagination) && isset($pagination->total)) ? (int) $pagination->total : count($items);
+$limitStart = (is_object($pagination) && isset($pagination->limitstart)) ? (int) $pagination->limitstart : max(0, $input->getInt('start', 0));
+
+if ($totalItems > 0) {
+    $pagesTotal = (int) ceil($totalItems / $limit);
+    $current    = (int) floor($limitStart / $limit) + 1;
+    if ($current < 1) {
+        $current = 1;
+    } elseif ($current > $pagesTotal) {
+        $current = $pagesTotal;
+    }
+} else {
+    $pagesTotal = 1;
+    $current    = 1;
+}
+
+$items = array_slice($items, 0, $limit);
+
+if (is_object($pagination)) {
+    $pagination->limit       = $limit;
+    $pagination->pagesTotal  = $pagesTotal;
+    $pagination->pagesCurrent = $current;
+}
 ?>
 <div class="projects_page container">
 	<div class="projects_wrapper project_main">
@@ -184,10 +210,6 @@ if ($filterTag !== '') {
 
 	<div class="cards_pagination">
 		<?php
-			$pagesTotal = (int) ($this->pagination->pagesTotal ?? 1);
-			$current    = (int) ($this->pagination->pagesCurrent ?? 1);
-			$limit      = (int) ($this->pagination->limit ?? 9);
-
 			$uri = Uri::getInstance();
 			$query = $uri->getQuery(true);
 			unset($query['start']);

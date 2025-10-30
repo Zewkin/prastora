@@ -21,6 +21,7 @@ $option = $app->input->getCmd('option', '');
 $view   = $app->input->getCmd('view', '');
 $layout = $app->input->getCmd('layout', '');
 
+
 $assetMap = [
 	'constitution' => [
 		'css' => ['about-us.css', 'constitution.css'],
@@ -33,6 +34,7 @@ $assetMap = [
 	'about-us' => [
 		'css' => ['about-us.css'],
 	],
+	'privacy-policy' => [],
 ];
 
 $menu = $app->getMenu();
@@ -77,6 +79,15 @@ foreach ($jsToLoad as $jsFile) {
 
 $isHome = $active && !empty($active->home);
 
+$bodyClasses = [];
+if ($active && !empty($active->alias)) {
+	$bodyClasses[] = 'page-' . preg_replace('#[^a-z0-9\-]+#i', '-', (string) $active->alias);
+}
+if (in_array('privacy-policy', $pageKeys, true)) {
+	$bodyClasses[] = 'colored_bg';
+}
+$bodyClasses = array_values(array_unique(array_filter($bodyClasses)));
+
 // Вычисляем action для формы поиска: пункт меню на com_finder, иначе прямой URL
 $searchMenuItem = $menu ? $menu->getItems('link', 'index.php?option=com_finder&view=search', true) : null;
 $searchAction = $searchMenuItem
@@ -87,6 +98,7 @@ if ($option === 'com_finder') {
 	$isHome = false;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
 	<head>
@@ -95,7 +107,7 @@ if ($option === 'com_finder') {
 		<jdoc:include type="styles" />
 		<jdoc:include type="scripts" />
 	</head>
-	<body>
+	<body<?php echo empty($bodyClasses) ? '' : ' class="' . htmlspecialchars(implode(' ', $bodyClasses), ENT_QUOTES, 'UTF-8') . '"'; ?>>
 
 <?php if ($isHome): ?>
 		<jdoc:include type="message" />
@@ -108,11 +120,11 @@ if ($option === 'com_finder') {
 					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
 					<div class="nav_menu">
 						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-							<a href="/constitution"><p>Канстытуцыя</p></a>
-							<a href="/projects"><p>Праекты</p></a>
-							<a href="/news"><p>Навіны</p></a>
-							<a href="/about-us"><p>Пра нас</p></a>
-							<a href="/faq"><p>FAQ</p></a>
+							<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+							<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+							<a href="/news"><p data-label="Навіны">Навіны</p></a>
+							<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+							<a href="/faq"><p data-label="FAQ">FAQ</p></a>
 						<?php } ?>
 					</div>
 				</div>
@@ -137,11 +149,11 @@ if ($option === 'com_finder') {
 			<div class="mob_menu_content">
 				<div class="nav_menu">
 					<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-						<a href="/constitution"><p>Канстытуцыя</p></a>
-						<a href="/projects"><p>Праекты</p></a>
-						<a href="/news"><p>Навіны</p></a>
-						<a href="/about-us"><p>Пра нас</p></a>
-						<a href="/faq"><p>FAQ</p></a>
+						<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
+						<a href="/projects"><p data-label="Праекты">Праекты</p></a>
+						<a href="/news"><p data-label="Навіны">Навіны</p></a>
+						<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
+						<a href="/faq"><p data-label="FAQ">FAQ</p></a>
 					<?php } ?>
 				</div>
 				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">

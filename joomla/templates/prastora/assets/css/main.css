@@ -8,6 +8,7 @@
 
 a {
   text-decoration: none;
+  color: inherit;
 }
 
 input,
@@ -49,8 +50,9 @@ body {
 
 .main_header {
   background: url(../images/header-bg.png);
-  background-position: center;
-  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: contain;
   margin-top: 20px;
   padding: 12px 45px 40px;
   border-radius: 40px;
@@ -82,6 +84,23 @@ body {
   line-height: 21px;
   letter-spacing: 0px;
   text-align: center;
+  position: relative;
+  display: inline-block;
+}
+
+.nav_menu p::after {
+  content: attr(data-label);
+  font-weight: 700;
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.nav_menu p:hover {
+  /* letter-spacing: .2px; */
+  font-weight: 700;
 }
 
 .nav_search {
@@ -105,9 +124,14 @@ body {
   line-height: 21px;
   letter-spacing: 0px;
   text-align: left;
+  background-color: #f9f9fb;
 }
 .nav_search input::placeholder {
   color: rgb(160, 124, 227);
+}
+
+.nav_search input:focus::placeholder {
+  color: transparent;
 }
 
 .nav_search img {
@@ -135,6 +159,11 @@ body {
   line-height: 130%;
   letter-spacing: 0px;
   text-align: center;
+}
+
+.nav_btn:hover {
+  transform: scaleY(1.1);
+  transition: all 0.4s ease;
 }
 
 .lang_toggler {
@@ -195,6 +224,12 @@ nav {
   align-items: center;
   gap: 10px;
   background: rgb(121, 57, 204);
+  transition: all 0.4s ease;
+}
+
+.header_links a:hover {
+  background: #DE0E0E;
+  transform: scale(1.02);
 }
 
 .header_links div {
@@ -203,6 +238,10 @@ nav {
   background: rgb(246, 244, 248);
   border-radius: 50%;
 }
+
+/* .header_links a:hover div {
+  transform: scale(1.2);
+} */
 
 .header_links span {
   /* Small title */
@@ -238,6 +277,9 @@ nav {
   gap: 20px;
 }
 
+.header_socials a:hover img {
+  filter: brightness(0) saturate(100%) invert(26%) sepia(71%) saturate(2688%) hue-rotate(252deg) brightness(89%) contrast(93%);
+}
 .moto_block {
   display: flex;
   align-items: center;
@@ -318,12 +360,17 @@ nav {
   border-radius: 40px;
   padding: 60px 40px;
   background: rgb(229, 215, 255);
+  transition: all 0.4s ease;
 }
 
 .howtw_card_img {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.howtw_card:hover {
+  transform: scale(1.02);
+  transition: all 0.4s ease;
 }
 .howtw_card p {
   margin-top: 50px;
@@ -449,6 +496,8 @@ nav {
   line-height: 130%;
   letter-spacing: 0px;
   text-align: left;
+  display: block;
+  padding-right: 35px;
 }
 
 .last_project_card_bg {
@@ -481,7 +530,13 @@ nav {
   align-items: center;
   justify-content: flex-end;
   margin-top: 45px;
+  /* transition: all 0.4s ease; */
 }
+
+/* .corner_btn:hover {
+  transform: scale(1.02);
+  transition: all 0.4s ease;
+} */
 
 .line_btn {
   box-sizing: border-box;
@@ -522,9 +577,23 @@ nav {
   padding: 20px;
   display: flex;
   align-items: flex-end;
+  transition: all 0.4s ease;
 }
 
-.news_card1 {
+.news_card:hover {
+  transform: scale(1.02);
+  transition: all 0.4s ease;
+}
+
+.news_card:hover .news_card_desc {
+  transform: scale(0.9804);
+}
+
+.news_card:hover::after {
+  transform: scale(1.01);
+}
+
+/* .news_card1 {
   background: url(../images/news-1.png);
   background-size: cover;
   background-position: center;
@@ -538,7 +607,7 @@ nav {
   background: url(../images/news-3.png);
   background-size: cover;
   background-position: center;
-}
+} */
 
 .card_link {
   position: absolute;
@@ -554,6 +623,8 @@ nav {
   width: 85%;
   position: relative;
   z-index: 2; /* текстовый блок над выемкой */
+  transform-origin: bottom left;
+  transition: transform 0.4s ease;
 }
 
 /* Выемка в правом нижнем углу карточки (над фото, под контентом) */
@@ -562,8 +633,8 @@ nav {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 75px;
-  height: 75px;
+  width: 90px;
+  height: 90px;
   background: url(../images/corner.png) no-repeat bottom right;
   background-size: contain;
   z-index: 1; /* выше фона фото, ниже текста и кнопки */
@@ -589,6 +660,7 @@ nav {
   line-height: 23px;
   letter-spacing: 0px;
   text-align: left;
+  margin-bottom: 10px;
 }
 .news_card_desc span {
   /* Small Body */
@@ -601,7 +673,7 @@ nav {
   text-align: left;
   display: -webkit-box;
   line-clamp: 1;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -618,14 +690,41 @@ nav {
 }
 
 .video_player {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 40px;
   height: 502px;
   width: 100%;
-  background: url(../images/video-bg.png);
   margin-bottom: 14px;
+  background: url(../images/video-bg.png) center center/cover no-repeat;
+  overflow: hidden;
+}
+
+.video_player_overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background-size: cover;
+  background-position: center;
+  transition: opacity 0.35s ease;
+}
+
+.video_player_overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(19, 16, 25, 0.25);
+}
+
+.video_player_overlay > * {
+  position: relative;
+  z-index: 1;
 }
 
 .video_play_btn {
@@ -639,6 +738,35 @@ nav {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  border: none;
+}
+
+.video_play_btn img {
+  pointer-events: none;
+}
+
+.video_player[data-video-playing="1"] .video_player_overlay {
+  opacity: 0;
+  pointer-events: none;
+}
+.video_player[data-video-playing="1"] .video_player_overlay[data-video-overlay] {
+  display: none;
+}
+
+.video_frame_holder,
+.video_frame_holder iframe {
+  width: 100%;
+  height: 100%;
+}
+
+.video_frame_holder {
+  position: relative;
+  z-index: 0;
+}
+
+.video_frame_holder iframe {
+  border: 0;
+  border-radius: inherit;
 }
 .video_block_desc {
   display: flex;
@@ -1993,7 +2121,7 @@ footer {
 
 /* Enforce static spacing for header search */
 .nav_right { gap: 23px; padding-right: 10px; }
-.nav_right .nav_search { margin-right: 20px; }
+.nav_right .nav_search { margin-right: 30px; }
 
 .no-projects {
   text-align: center;

@@ -15,3 +15,5 @@ SELECT 'mainmenu','Канстытуцыя','constitution','', 'constitution', CO
 WHERE NOT EXISTS (SELECT 1 FROM `jo8cq_menu` WHERE `menutype`='mainmenu' AND `alias`='constitution');
 
 COMMIT;
+
+
