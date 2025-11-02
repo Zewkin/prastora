@@ -395,13 +395,14 @@
   gap: 8px;
 }
 .comment_list_title_icon {
-  display: inline-block;
+  display: block;
   width: 24px;
   height: 24px;
-  background-color: #C7BFD6;
-  mask: url('../icons/comment.svg') no-repeat center / contain;
-  -webkit-mask: url('../icons/comment.svg') no-repeat center / contain;
   flex-shrink: 0;
+  fill: #C7BFD6;
+}
+.comment_list_title_icon path {
+  fill: inherit;
 }
 .comment_back_btn {
   background: none;
@@ -433,7 +434,7 @@
   justify-content: center;
 }
 .comments_block--collapsed .comment_list_title_icon {
-  background-color: #A07CE3;
+  fill: #A07CE3;
 }
 .comments_block--collapsed .comment_back_btn {
   display: none;
@@ -448,13 +449,13 @@
   color: #C7BFD6;
 }
 .comment_replies_icon {
-  display: inline-block;
+  display: block;
   width: 16px;
   height: 16px;
-  background-color: currentColor;
-  mask: url('../icons/comment.svg') no-repeat center / contain;
-  -webkit-mask: url('../icons/comment.svg') no-repeat center / contain;
   flex-shrink: 0;
+}
+.comment_replies_icon path {
+  fill: currentColor;
 }
 .comment_replies_count p {
   color: inherit;

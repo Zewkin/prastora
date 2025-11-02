@@ -330,7 +330,9 @@ if (empty($sections)) {
         <div class="comments_list">
             <div class="comment_list_title" data-role="list-header">
                 <div class="comment_list_title_inner">
-                    <span class="comment_list_title_icon" aria-hidden="true"></span>
+                    <svg class="comment_list_title_icon" aria-hidden="true" viewBox="0 0 16.9121 15" focusable="false">
+                        <path d="M8.18359 0C3.66406 0 0 3.35742 0 7.5C0 11.6426 3.66406 15 8.18359 15C9.35352 15 10.4668 14.7754 11.4727 14.3701C11.5996 14.3193 11.7344 14.29 11.8691 14.29L15.9121 14.29C16.6035 14.29 17.0859 13.6045 16.8535 12.9531L15.9766 10.502C15.8926 10.2686 15.9023 10.0146 15.9824 9.78125C16.2324 9.06152 16.3691 8.29492 16.3691 7.5C16.3691 3.35742 12.7051 0 8.18359 0Z" />
+                    </svg>
                     <span data-role="list-title">Усе Каментары</span>
                 </div>
                 <button type="button" class="comment_back_btn" data-role="back-to-all" hidden>Усе каментары</button>
