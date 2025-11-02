@@ -330,7 +330,7 @@ if (empty($sections)) {
         <div class="comments_list">
             <div class="comment_list_title" data-role="list-header">
                 <div class="comment_list_title_inner">
-                    <img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" />
+                    <span class="comment_list_title_icon" aria-hidden="true"></span>
                     <span data-role="list-title">Усе Каментары</span>
                 </div>
                 <button type="button" class="comment_back_btn" data-role="back-to-all" hidden>Усе каментары</button>

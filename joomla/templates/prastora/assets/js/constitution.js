@@ -432,6 +432,14 @@
       return `${text.substring(0, maxLength - 1)}…`;
     };
 
+    const getRepliesCount = (comment) => {
+      if (!comment || !Array.isArray(comment.replies) || !comment.replies.length) {
+        return 0;
+      }
+
+      return comment.replies.reduce((total, reply) => total + 1 + getRepliesCount(reply), 0);
+    };
+
     const parseDateValue = (value) => {
       const timestamp = Date.parse(value || '');
       return Number.isNaN(timestamp) ? 0 : timestamp;
@@ -960,6 +968,27 @@
 
       actions.appendChild(buildReactionNode('like', comment.likes));
       actions.appendChild(buildReactionNode('dislike', comment.dislikes));
+
+      const repliesIndicator = document.createElement('div');
+      repliesIndicator.className = 'article_reaction comment_replies_count';
+      repliesIndicator.dataset.role = 'comment-replies';
+      repliesIndicator.dataset.commentId = String(comment.id);
+
+      const repliesIcon = document.createElement('span');
+      repliesIcon.className = 'comment_replies_icon';
+      repliesIndicator.appendChild(repliesIcon);
+
+      const repliesCounter = document.createElement('p');
+      repliesCounter.dataset.role = 'replies-count';
+      const repliesTotal = getRepliesCount(comment);
+      repliesCounter.textContent = String(repliesTotal);
+      repliesIndicator.appendChild(repliesCounter);
+
+      if (repliesTotal > 0) {
+        repliesIndicator.classList.add('comment_replies_count--active');
+      }
+
+      actions.appendChild(repliesIndicator);
 
       const reply = document.createElement('div');
       reply.className = 'article_reaction article_commenting';
