@@ -9,10 +9,22 @@ use Joomla\CMS\Router\Route;
 $app = Factory::getApplication();
 $doc = $app->getDocument();
 $tplUri = rtrim(Uri::root(true), '/') . '/templates/' . $this->template;
+$tplPath = __DIR__;
 
 // Базовые ассеты подключаем всегда
-$doc->addStyleSheet($tplUri . '/assets/css/main.css');
-$doc->addScript($tplUri . '/assets/js/main.js');
+$mainCssOptions = [];
+$mainCssPath = $tplPath . '/assets/css/main.css';
+if (is_file($mainCssPath)) {
+	$mainCssOptions['version'] = (string) filemtime($mainCssPath);
+}
+$doc->addStyleSheet($tplUri . '/assets/css/main.css', $mainCssOptions);
+
+$mainJsOptions = [];
+$mainJsPath = $tplPath . '/assets/js/main.js';
+if (is_file($mainJsPath)) {
+	$mainJsOptions['version'] = (string) filemtime($mainJsPath);
+}
+$doc->addScript($tplUri . '/assets/js/main.js', $mainJsOptions);
 
 $cssToLoad = [];
 $jsToLoad  = [];
@@ -70,11 +82,21 @@ $cssToLoad = array_values(array_unique($cssToLoad));
 $jsToLoad  = array_values(array_unique($jsToLoad));
 
 foreach ($cssToLoad as $cssFile) {
-    $doc->addStyleSheet($tplUri . '/assets/css/' . $cssFile);
+	$options = [];
+	$path = $tplPath . '/assets/css/' . $cssFile;
+	if (is_file($path)) {
+		$options['version'] = (string) filemtime($path);
+	}
+    $doc->addStyleSheet($tplUri . '/assets/css/' . $cssFile, $options);
 }
 
 foreach ($jsToLoad as $jsFile) {
-    $doc->addScript($tplUri . '/assets/js/' . $jsFile);
+	$options = [];
+	$path = $tplPath . '/assets/js/' . $jsFile;
+	if (is_file($path)) {
+		$options['version'] = (string) filemtime($path);
+	}
+    $doc->addScript($tplUri . '/assets/js/' . $jsFile, $options);
 }
 
 $isHome = $active && !empty($active->home);

@@ -5,10 +5,29 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Captcha\Captcha;
+use Joomla\Registry\Registry;
 
 $app     = Factory::getApplication();
 $template = $app->getTemplate();
 $tplUri  = rtrim(Uri::root(true), '/') . '/templates/' . $template;
+
+$commentsPlugin = PluginHelper::getPlugin('ajax', 'comments');
+$commentsParams = $commentsPlugin ? new Registry($commentsPlugin->params) : new Registry();
+$commentsModerationMode = (string) $commentsParams->get('moderation_mode', 'premoderation');
+$captchaEnabled = (bool) $commentsParams->get('captcha_enabled', 0);
+$captchaPlugin = (string) $commentsParams->get('captcha_plugin', '');
+$captchaInstance = null;
+
+if ($captchaEnabled && $captchaPlugin !== '') {
+    try {
+        PluginHelper::importPlugin('captcha', $captchaPlugin);
+        $captchaInstance = Captcha::getInstance($captchaPlugin, ['namespace' => 'ajaxcomments']);
+    } catch (\RuntimeException $exception) {
+        $captchaInstance = null;
+    }
+}
 
 $item = $this->item ?? null;
 if (!$item || !\is_object($item)) {
@@ -266,13 +285,17 @@ if (empty($sections)) {
 
     <div class="article_block" id="constitution-content">
         <?php if ($prefaceHtml !== '' && !empty($sections)) : ?>
-        <div class="article_block_preface" id="constitution-preface">
+        <div class="article_block_preface" id="constitution-preface" data-role="article-content" data-section-id="constitution-preface">
             <?php echo $prefaceHtml; ?>
         </div>
         <?php endif; ?>
         <?php foreach ($sections as $sec) : ?>
         <?php foreach ($sec['articles'] as $articleIndex => $article) : ?>
-        <div class="article_block_item" id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
+        <?php
+        $articleHeading = $normalizeHeading($article['titleHtml'], $article['title']);
+        $articleHeadingText = trim(strip_tags($articleHeading));
+        ?>
+        <div class="article_block_item" id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>" data-section-title="<?php echo htmlspecialchars($articleHeadingText, ENT_QUOTES, 'UTF-8'); ?>">
             <?php if ($articleIndex === 0) : ?>
             <div class="article_chapter_title" id="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
                 <?php $chapterHeading = $normalizeHeading($sec['titleHtml'], $sec['title']); ?>
@@ -283,16 +306,15 @@ if (empty($sections)) {
             </div>
             <?php endif; ?>
             <div class="article_block_item_title">
-                <?php $articleHeading = $normalizeHeading($article['titleHtml'], $article['title']); ?>
                 <h4><?php echo $articleHeading; ?></h4>
-                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
+                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>" data-section-title="<?php echo htmlspecialchars($articleHeadingText, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
                     <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
-                    <div class="article_reaction"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
-                    <div class="article_reaction article_commenting"><p><?php echo Text::_('Каментаваць'); ?></p></div>
+                    <div class="article_reaction" data-role="open-comments"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
+                    <div class="article_reaction article_commenting" data-role="comment-open"><p><?php echo Text::_('Каментаваць'); ?></p></div>
                 </div>
             </div>
-            <div class="article_block_item_content">
+            <div class="article_block_item_content" data-role="article-content">
                 <?php echo $article['html']; ?>
             </div>
         </div>
@@ -304,46 +326,38 @@ if (empty($sections)) {
         </div>
     </div>
 
-    <div class="comments_block">
-        <div class="auth_comment" style="display: none;">
-            <input type="text" placeholder="Ананімны Карыстальнік" />
-            <input type="text" placeholder="Дадаць пошту" />
-            <input type="text" placeholder="На маю думку тут лепей казаць што..." />
-            <div class="send_btn"><button class="main_btn">Каментаваць</button></div>
-        </div>
+    <div class="comments_block" data-comments="1" data-article-id="<?php echo (int) $item->id; ?>" data-like-icon="<?php echo $tplUri; ?>/assets/icons/like.svg" data-dislike-icon="<?php echo $tplUri; ?>/assets/icons/dislike.svg" data-reply-icon="<?php echo $tplUri; ?>/assets/icons/comment.svg" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaInstance ? '1' : '0'; ?>">
         <div class="comments_list">
-            <div class="comment_list_title">
-                <img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" />Усе Каментары
+            <div class="comment_list_title" data-role="list-header">
+                <div class="comment_list_title_inner">
+                    <img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" />
+                    <span data-role="list-title">Усе Каментары</span>
+                </div>
+                <button type="button" class="comment_back_btn" data-role="back-to-all" hidden>Усе каментары</button>
             </div>
-            <div class="comment_item">
-                <div class="comment_item_header">
-                    <span class="comment_item_header_name">Sophie</span>
-                </div>
-                <div class="comment_item_content">
-                    This article is the foundation of our legislative process. It clearly defines where the power to make laws resides, ensuring a structured and balanced government.
-                </div>
-                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                    <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
-                    <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
-                    <div class="article_reaction"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
-                    <div class="article_reaction article_commenting"><p><?php echo Text::_('Каментаваць'); ?></p></div>
-                </div>
-            </div>
-            <div class="comment_item">
-                <div class="comment_item_header">
-                    <span class="comment_item_header_name">Sophie</span>
-                </div>
-                <div class="comment_item_content">
-                    This article is the foundation of our legislative process. It clearly defines where the power to make laws resides, ensuring a structured and balanced government.
-                </div>
-                <div class="article_reactions" data-article-id="<?php echo (int) $item->id; ?>" data-section-id="<?php echo htmlspecialchars($article['id'], ENT_QUOTES, 'UTF-8'); ?>">
-                    <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
-                    <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
-                    <div class="article_reaction"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
-                    <div class="article_reaction article_commenting"><p><?php echo Text::_('Каментаваць'); ?></p></div>
-                </div>
+            <div class="comments_container" data-role="comments-list">
+                <div class="comments_empty" data-role="comments-empty">Пакуль няма каментароў.</div>
             </div>
         </div>
+        <form class="auth_comment" data-role="comment-form" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaInstance ? '1' : '0'; ?>" novalidate>
+            <div class="comment_form_state" data-role="reply-context" hidden>
+                <span data-role="reply-label">Вы адказваеце на каментар.</span>
+                <button type="button" class="comment_reply_clear" data-role="reply-clear">Адмяніць</button>
+            </div>
+            <div class="comment_form_notice" data-role="form-notice" hidden></div>
+            <div class="comment_form_error" data-role="form-error" hidden></div>
+            <input type="text" name="author_name" placeholder="Ананімны Карыстальнік" maxlength="255" />
+            <input type="email" name="author_email" placeholder="Дадаць пошту" maxlength="255" />
+            <textarea name="body" rows="4" placeholder="На маю думку тут лепей казаць што..." maxlength="5000" required></textarea>
+            <?php if ($captchaInstance) : ?>
+            <div class="comment_form_captcha" data-role="captcha-wrapper">
+                <?php echo $captchaInstance->display('ajaxcomments-comment-' . (int) $item->id, 'ajaxcomments-captcha-' . (int) $item->id); ?>
+            </div>
+            <?php endif; ?>
+            <div class="send_btn">
+                <button class="main_btn" type="submit"><?php echo Text::_('Каментаваць'); ?></button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -354,4 +368,3 @@ if (empty($sections)) {
     </div>
     <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-3.svg" alt="" /></div><p>Усе Каментары</p></div>
 </div>
-

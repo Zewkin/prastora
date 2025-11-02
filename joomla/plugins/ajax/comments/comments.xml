@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="ajax" method="upgrade" version="5.0">
+    <name>plg_ajax_comments</name>
+    <author>Prastora</author>
+    <version>1.0.0</version>
+    <description>AJAX comments with highlights</description>
+    <files>
+        <filename plugin="comments">comments.php</filename>
+        <filename>comments.xml</filename>
+    </files>
+    <languages>
+        <language tag="en-GB">language/en-GB/en-GB.plg_ajax_comments.ini</language>
+    </languages>
+    <config>
+        <fields name="params">
+            <fieldset name="moderation" label="PLG_AJAX_COMMENTS_FIELDSET_MODERATION">
+                <field
+                    name="moderation_mode"
+                    type="list"
+                    label="PLG_AJAX_COMMENTS_FIELD_MODERATION_MODE_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_MODERATION_MODE_DESC"
+                    default="premoderation">
+                    <option value="auto">PLG_AJAX_COMMENTS_OPTION_MODERATION_AUTO</option>
+                    <option value="premoderation">PLG_AJAX_COMMENTS_OPTION_MODERATION_PRE</option>
+                </field>
+            </fieldset>
+            <fieldset name="captcha" label="PLG_AJAX_COMMENTS_FIELDSET_CAPTCHA">
+                <field
+                    name="captcha_enabled"
+                    type="radio"
+                    label="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_ENABLED_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_ENABLED_DESC"
+                    default="0"
+                    class="btn-group btn-group-yesno">
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+                <field
+                    name="captcha_plugin"
+                    type="plugins"
+                    folder="captcha"
+                    label="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_PLUGIN_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_PLUGIN_DESC"
+                    filter="string" />
+            </fieldset>
+        </fields>
+    </config>
+</extension>

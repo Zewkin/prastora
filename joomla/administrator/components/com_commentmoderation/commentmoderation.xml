@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade" version="5.0">
+    <name>com_commentmoderation</name>
+    <author>Prastora</author>
+    <version>1.0.0</version>
+    <description>Comment moderation dashboard</description>
+
+    <administration>
+        <namespace path="src">Joomla\Component\Commentmoderation</namespace>
+        <menu link="index.php?option=com_commentmoderation">COM_COMMENTMODERATION</menu>
+        <files>
+            <folder>services</folder>
+            <folder>src</folder>
+            <folder>tmpl</folder>
+            <folder>language</folder>
+        </files>
+        <languages>
+            <language tag="en-GB">language/en-GB/en-GB.com_commentmoderation.ini</language>
+        </languages>
+    </administration>
+</extension>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+    <fieldset name="basic" label="COM_COMMENTMODERATION_TITLE">
+        <field name="id" type="hidden" />
+        <field name="article_id" type="text" label="COM_COMMENTMODERATION_FIELD_ARTICLE_ID" readonly="true" class="readonly" />
+        <field name="client_token" type="hidden" />
+        <field name="section_id" type="text" label="COM_COMMENTMODERATION_FIELD_SECTION_ID" readonly="true" class="readonly" />
+        <field name="parent_id" type="text" label="COM_COMMENTMODERATION_FIELD_PARENT_ID" readonly="true" class="readonly" />
+        <field name="author_name" type="text" label="COM_COMMENTMODERATION_FIELD_AUTHOR_NAME" />
+        <field name="author_email" type="email" label="COM_COMMENTMODERATION_FIELD_AUTHOR_EMAIL" />
+        <field name="status" type="list" label="COM_COMMENTMODERATION_FIELD_STATUS" required="true" default="1">
+            <option value="0">COM_COMMENTMODERATION_STATUS_PENDING</option>
+            <option value="1">COM_COMMENTMODERATION_STATUS_PUBLISHED</option>
+            <option value="2">COM_COMMENTMODERATION_STATUS_REJECTED</option>
+        </field>
+        <field name="body" type="textarea" label="COM_COMMENTMODERATION_FIELD_BODY" required="true" rows="8" />
+        <field name="anchor_exact" type="textarea" label="COM_COMMENTMODERATION_FIELD_ANCHOR_EXACT" readonly="true" class="readonly" rows="4" />
+        <field name="anchor_prefix" type="text" label="COM_COMMENTMODERATION_FIELD_ANCHOR_PREFIX" readonly="true" class="readonly" />
+        <field name="anchor_suffix" type="text" label="COM_COMMENTMODERATION_FIELD_ANCHOR_SUFFIX" readonly="true" class="readonly" />
+        <field name="anchor_start" type="text" label="COM_COMMENTMODERATION_FIELD_ANCHOR_START" readonly="true" class="readonly" />
+        <field name="anchor_end" type="text" label="COM_COMMENTMODERATION_FIELD_ANCHOR_END" readonly="true" class="readonly" />
+        <field name="created" type="calendar" label="COM_COMMENTMODERATION_FIELD_CREATED" readonly="true" class="readonly" />
+    </fieldset>
+</form>
+
+
