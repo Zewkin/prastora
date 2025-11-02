@@ -395,6 +395,7 @@
   gap: 8px;
 }
 .comment_list_title_icon {
+  display: inline-block;
   width: 24px;
   height: 24px;
   background-color: #C7BFD6;
@@ -447,6 +448,7 @@
   color: #C7BFD6;
 }
 .comment_replies_icon {
+  display: inline-block;
   width: 16px;
   height: 16px;
   background-color: currentColor;
