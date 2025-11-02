@@ -378,6 +378,47 @@
       selectionCheckHandle: null,
     };
 
+    const isPanelCollapsed = () => state.root && state.root.classList.contains('comments_block--collapsed');
+
+    const openPanel = (options = {}) => {
+      if (!state.root) {
+        return;
+      }
+
+      const wasCollapsed = isPanelCollapsed();
+
+      if (wasCollapsed) {
+        state.root.classList.remove('comments_block--collapsed');
+        state.root.classList.add('comments_block--expanded');
+      }
+
+      if (options.focusTextarea && state.textarea) {
+        requestAnimationFrame(() => {
+          try {
+            state.textarea.focus({ preventScroll: true });
+          } catch (error) {
+            state.textarea.focus();
+          }
+        });
+      }
+
+      if (options.scrollList && state.list) {
+        if (typeof state.list.scrollTo === 'function') {
+          state.list.scrollTo({ top: 0, behavior: options.smooth === false ? 'auto' : 'smooth' });
+        } else {
+          state.list.scrollTop = 0;
+        }
+      }
+    };
+
+    const collapsePanel = () => {
+      if (!state.root) {
+        return;
+      }
+      state.root.classList.remove('comments_block--expanded');
+      state.root.classList.add('comments_block--collapsed');
+    };
+
     const sanitizeHtmlText = (html) => {
       const tmp = document.createElement('div');
       tmp.innerHTML = html;
@@ -656,6 +697,7 @@
       state.currentContext.sectionId = sectionId;
       state.currentContext.anchor = anchor;
       if (sectionId) {
+        openPanel({ focusTextarea: true, scrollList: true });
         setSectionFilter(sectionId, getSectionTitle(sectionId), { scrollList: true, smooth: true });
         clearFormNotice();
         const title = state.activeSectionTitle || getSectionTitle(sectionId) || '';
@@ -800,6 +842,7 @@
     };
 
     const focusComment = (commentId, options) => {
+      openPanel();
       const opts = options || {};
       const element = state.commentElements.get(commentId);
       if (!element) {
@@ -1075,6 +1118,7 @@
         state.currentContext.sectionId = null;
       }
       clearFormNotice();
+      openPanel({ scrollList: true });
       updateCommentView({ scrollList: true, smooth: true });
     };
 
@@ -1085,6 +1129,7 @@
       }
 
       clearFormNotice();
+      openPanel({ scrollList: true });
       setSectionFilter(sectionId, sectionTitle, { scrollList: true, smooth: true });
       state.currentContext.parentId = null;
       state.currentContext.anchor = null;
@@ -1096,6 +1141,7 @@
         return;
       }
 
+      openPanel({ focusTextarea: true, scrollList: true });
       setSectionFilter(sectionId, sectionTitle, { scrollList: true, smooth: true });
       clearReplyContext();
       clearSelectionContext();
@@ -1154,6 +1200,9 @@
     };
 
     const handleListClick = (event) => {
+      if (isPanelCollapsed()) {
+        openPanel();
+      }
       const likeTrigger = event.target.closest('[data-role="comment-like"]');
       if (likeTrigger) {
         const container = likeTrigger.closest('.comment_reactions');
@@ -1617,6 +1666,25 @@
         }
       });
 
+      collapsePanel();
+
+      state.root.addEventListener(
+        'click',
+        (event) => {
+          if (!isPanelCollapsed()) {
+            return;
+          }
+
+          // Allow modifier clicks (e.g., middle click) to pass through
+          if (event.button !== 0) {
+            return;
+          }
+
+          openPanel();
+        },
+        true
+      );
+
       if (state.list) {
         state.list.addEventListener('click', handleListClick);
       }
@@ -1632,6 +1700,8 @@
       showSection: showSectionComments,
       startComment: startCommentForSection,
       clearSection: clearSectionFilter,
+      open: () => openPanel(),
+      collapse: collapsePanel,
     };
   })();
 
