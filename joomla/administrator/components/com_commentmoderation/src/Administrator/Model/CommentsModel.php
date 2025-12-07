@@ -10,6 +10,7 @@ namespace Joomla\Component\Commentmoderation\Administrator\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
+use Joomla\Component\Commentmoderation\Administrator\Service\CommentNotificationService;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
 use Joomla\Utilities\ArrayHelper;
@@ -124,6 +125,12 @@ class CommentsModel extends ListModel
         $db = $this->getDatabase();
         $now = Factory::getDate()->toSql();
 
+        $notifyRows = [];
+
+        if ($status === self::STATUS_APPROVED) {
+            $notifyRows = $this->loadRowsForNotification($db, $pks);
+        }
+
         $query = $db->getQuery(true)
             ->update($db->quoteName('#__constitution_comments'))
             ->set($db->quoteName('status') . ' = :status')
@@ -134,7 +141,13 @@ class CommentsModel extends ListModel
 
         $db->setQuery($query)->execute();
 
-        return (int) $db->getAffectedRows();
+        $affected = (int) $db->getAffectedRows();
+
+        if ($status === self::STATUS_APPROVED && $affected > 0 && !empty($notifyRows)) {
+            $this->triggerApprovalNotifications($db, $notifyRows);
+        }
+
+        return $affected;
     }
 
     protected function deleteCommentCascade(DatabaseInterface $db, int $commentId): bool
@@ -179,6 +192,56 @@ class CommentsModel extends ListModel
         )->execute();
 
         return true;
+    }
+
+    private function loadRowsForNotification(DatabaseInterface $db, array $pks): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $pks))));
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        $approvedStatus = self::STATUS_APPROVED;
+
+        $query = $db->getQuery(true)
+            ->select([
+                $db->quoteName('id'),
+                $db->quoteName('article_id'),
+                $db->quoteName('parent_id'),
+                $db->quoteName('author_email'),
+                $db->quoteName('author_name'),
+                $db->quoteName('body'),
+                $db->quoteName('status'),
+            ])
+            ->from($db->quoteName('#__constitution_comments'))
+            ->where($db->quoteName('id') . ' IN (' . implode(',', $ids) . ')')
+            ->where($db->quoteName('status') . ' <> :approved')
+            ->bind(':approved', $approvedStatus, ParameterType::INTEGER);
+
+        return $db->setQuery($query)->loadAssocList('id') ?: [];
+    }
+
+    private function triggerApprovalNotifications(DatabaseInterface $db, array $rows): void
+    {
+        if (!class_exists(CommentNotificationService::class)) {
+            \JLoader::registerNamespace(
+                'Joomla\\Component\\Commentmoderation',
+                JPATH_ADMINISTRATOR . '/components/com_commentmoderation/src',
+                false,
+                false,
+                'psr4'
+            );
+        }
+
+        if (!class_exists(CommentNotificationService::class)) {
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $row['status'] = self::STATUS_APPROVED;
+            CommentNotificationService::onCommentApproved($db, $row);
+        }
     }
 }
 

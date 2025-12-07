@@ -3,6 +3,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
@@ -104,14 +105,14 @@ $resolveMedia = static function ($value, string $default = '') {
 };
 
 $heroFallbackParagraphs = [
-	'Таму мы ператвараем наш сайт kanstytucyja.online у прастору для свабодных галасоў, сумесных рашэнняў і справядлівых законаў.',
-	'Наша місія – стварыць адкрытае і бяспечнае месца, дзе ўсе беларусы могуць удзельнічаць у фарміраванні законаў, рэформаў і Канстытуцыі Новай Беларусі. Мы вяртаем грамадзянам права голасу і ўплыву на будучыню сваёй краіны.',
+	Text::_('TPL_PRASTORA_ABOUT_HERO_PARAGRAPH1'),
+	Text::_('TPL_PRASTORA_ABOUT_HERO_PARAGRAPH2'),
 ];
 
 $hero = [
-	'title' => $prepareString($getRaw($fieldMap, 'about_hero_title'), 'Мы верым, што будучыня Беларусі належыць яе грамадзянам.'),
+	'title' => $prepareString($getRaw($fieldMap, 'about_hero_title'), Text::_('TPL_PRASTORA_ABOUT_HERO_TITLE')),
 	'paragraphs' => $prepareParagraphs($getRaw($fieldMap, 'about_hero_paragraphs'), $heroFallbackParagraphs),
-	'cta_text' => $prepareString($getRaw($fieldMap, 'about_hero_cta_text'), 'Падтрымаць Праект'),
+	'cta_text' => $prepareString($getRaw($fieldMap, 'about_hero_cta_text'), Text::_('TPL_PRASTORA_ABOUT_CTA_SUPPORT')),
 	'cta_link' => $prepareString($getRaw($fieldMap, 'about_hero_cta_link'), '#'),
 	'image' => $resolveMedia($getRaw($fieldMap, 'about_hero_image'), $tplUri . '/assets/images/about-img.png'),
 	'image_mobile' => null,
@@ -120,9 +121,9 @@ $hero = [
 $hero['image_mobile'] = $resolveMedia($getRaw($fieldMap, 'about_hero_image_mobile'), $hero['image']);
 
 $cardsFallback = [
-	['number' => '01', 'title' => 'Не абыякавыя. Не маўчым. Дзейнічаем.', 'text' => 'Мы — супольнасць людзей, для якіх будучыня Беларусі не абстракцыя. Мы аб’ядналіся, каб зрабіць удзел магчымым для кожнага: адкрыта, бяспечна, разумна. Мы не чакаем перамен — мы іх ствараем.'],
-	['number' => '02', 'title' => "Мы — тыя, хто не адышоў \nу бок ад праблем і выклікаў.", 'text' => 'Гэта прастора створана тымі, хто верыць: закон павінен служыць людзям. Мы тут, каб слухаць, прапаноўваць, абмяркоўваць і будаваць новае — разам з вамі.'],
-	['number' => '03', 'title' => 'Ты, хто хоча лепшага — і гатовы дзеля гэтага працаваць.', 'text' => 'Мы не ўцяклі ад адказнасці. Мы выбралі складанае, але неабходнае — адкрыта гаварыць, прапаноўваць рашэнні і шукаць агульны грунт. Бо Беларусь пачынаецца з тых, хто гатовы быць побач.'],
+	['number' => '01', 'title' => Text::_('TPL_PRASTORA_ABOUT_CARD1_TITLE'), 'text' => Text::_('TPL_PRASTORA_ABOUT_CARD1_TEXT')],
+	['number' => '02', 'title' => Text::_('TPL_PRASTORA_ABOUT_CARD2_TITLE'), 'text' => Text::_('TPL_PRASTORA_ABOUT_CARD2_TEXT')],
+	['number' => '03', 'title' => Text::_('TPL_PRASTORA_ABOUT_CARD3_TITLE'), 'text' => Text::_('TPL_PRASTORA_ABOUT_CARD3_TEXT')],
 ];
 
 $cards = $prepareRepeatable($getRaw($fieldMap, 'about_cards'), $cardsFallback);
@@ -131,29 +132,29 @@ $quote = [
 	'avatar' => $resolveMedia($getRaw($fieldMap, 'about_quote_avatar'), $tplUri . '/assets/images/about-avatar.png'),
 	'icon' => $resolveMedia($getRaw($fieldMap, 'about_quote_icon'), $tplUri . '/assets/icons/quote-icon.svg'),
 	'paragraphs' => $prepareParagraphs($getRaw($fieldMap, 'about_quote_text'), [
-		'Новая Беларусь гэта не ідэя з будучыні. Гэта мы, грамадзяне, што не маўчаць.',
-		'Мы стварылі гэтую прастору, каб кожны меў магчымасць адкрыта ўдзельнічаць у фарміраванні будучыні краіны: без страху, з павагай і ў дыялогу.',
-		'Мы верым у Беларусь, дзе закон служыць людзям, а ўлада дзейнічае празрыста і з адказнасцю.',
-		'І мы ведаем: змены пачынаюцца не «зверху», а з нас з вамі.',
+		Text::_('TPL_PRASTORA_ABOUT_QUOTE_LINE1'),
+		Text::_('TPL_PRASTORA_ABOUT_QUOTE_LINE2'),
+		Text::_('TPL_PRASTORA_ABOUT_QUOTE_LINE3'),
+		Text::_('TPL_PRASTORA_ABOUT_QUOTE_LINE4'),
 	]),
 ];
 
 $motto = [
-	'title' => $prepareString($getRaw($fieldMap, 'about_motto_title'), 'Міжнародны досвед – дзеля беларускай будучыні.'),
+	'title' => $prepareString($getRaw($fieldMap, 'about_motto_title'), Text::_('TPL_PRASTORA_ABOUT_MOTTO_TITLE')),
 	'paragraphs' => $prepareParagraphs($getRaw($fieldMap, 'about_motto_paragraphs'), [
-		'Праект Канстытуцыі Новага Беларусі распрацоўваецца з удзелам міжнародных кансультантаў — спецыялістаў у галіне канстытуцыйнага права, дэмакратычных пераходаў і дзяржаўнага кіравання.',
-		'Гэтыя эксперты аказалі незалежную экспертную падтрымку камандзе і дапамаглі адаптаваць праект да міжнародных стандартаў дэмакратыі, правоў чалавека і празрыстага кіравання.',
+		Text::_('TPL_PRASTORA_ABOUT_MOTTO_P1'),
+		Text::_('TPL_PRASTORA_ABOUT_MOTTO_P2'),
 	]),
 	'highlight_icon' => $resolveMedia($getRaw($fieldMap, 'about_motto_highlight_icon'), $tplUri . '/assets/icons/quote-icon-c.svg'),
-	'highlight_text' => $prepareString($getRaw($fieldMap, 'about_motto_highlight'), 'Іх вопыт — гэта падмурак для дакумента, які адпавядае як беларускім патрэбам, так і універсальным прынцыпам прававой дзяржавы.'),
+	'highlight_text' => $prepareString($getRaw($fieldMap, 'about_motto_highlight'), Text::_('TPL_PRASTORA_ABOUT_MOTTO_HIGHLIGHT')),
 ];
 
 $teamFallback = [];
 for ($i = 0; $i < 8; $i++) {
 	$teamFallback[] = [
 		'photo' => $tplUri . '/assets/images/kfc-founder.png',
-		'name' => 'Д-р Вольфганг БЕНЕДЕК',
-		'role' => 'Почетный профессор міжнароднага права, Інстытут міжнароднага права',
+		'name' => Text::_('TPL_PRASTORA_ABOUT_TEAM_NAME'),
+		'role' => Text::_('TPL_PRASTORA_ABOUT_TEAM_ROLE'),
 	];
 }
 
@@ -204,7 +205,7 @@ unset($partner);
 
 <div class="who_us container">
 	<div class="block_title">
-		<h2>Хто мы?</h2>
+		<h2><?php echo Text::_('TPL_PRASTORA_ABOUT_SECTION_STORY'); ?></h2>
 	</div>
 	<div class="whous_cards">
 		<?php foreach ($cards as $card) :
@@ -253,7 +254,7 @@ unset($partner);
 	</div>
 </div>
 
-<?php if (!empty($team)) : ?>
+<?php /* command_workers section temporarily disabled */ if (false && !empty($team)) : ?>
 <div class="command_workers">
 	<?php foreach ($team as $member) :
 		$photo = $member['photo'] ?? '';
@@ -273,7 +274,7 @@ unset($partner);
 
 <?php if (!empty($partners)) : ?>
 <section class="partners_block container">
-	<div class="block_title"><h2>Партнеры Праекта</h2></div>
+	<div class="block_title"><h2><?php echo Text::_('TPL_PRASTORA_ABOUT_SECTION_PARTNERS'); ?></h2></div>
 	<div class="partners_list">
 		<?php foreach ($partners as $partner) :
 			if (empty($partner['logo'])) {

@@ -24,6 +24,15 @@
                     <option value="premoderation">PLG_AJAX_COMMENTS_OPTION_MODERATION_PRE</option>
                 </field>
             </fieldset>
+            <fieldset name="privacy" label="PLG_AJAX_COMMENTS_FIELDSET_PRIVACY">
+                <field
+                    name="reaction_ip_secret"
+                    type="password"
+                    label="PLG_AJAX_COMMENTS_FIELD_REACTION_IP_SECRET_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_REACTION_IP_SECRET_DESC"
+                    class="input-large"
+                />
+            </fieldset>
             <fieldset name="captcha" label="PLG_AJAX_COMMENTS_FIELDSET_CAPTCHA">
                 <field
                     name="captcha_enabled"
@@ -36,12 +45,53 @@
                     <option value="0">JNO</option>
                 </field>
                 <field
+                    name="captcha_mode"
+                    type="list"
+                    label="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_MODE_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_MODE_DESC"
+                    default="joomla">
+                    <option value="joomla">PLG_AJAX_COMMENTS_OPTION_CAPTCHA_MODE_JOOMLA</option>
+                    <option value="recaptcha_invisible">PLG_AJAX_COMMENTS_OPTION_CAPTCHA_MODE_INVISIBLE</option>
+                </field>
+                <field
                     name="captcha_plugin"
                     type="plugins"
                     folder="captcha"
                     label="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_PLUGIN_LABEL"
                     description="PLG_AJAX_COMMENTS_FIELD_CAPTCHA_PLUGIN_DESC"
-                    filter="string" />
+                    filter="string"
+                    showon="captcha_mode:joomla" />
+                <field
+                    name="recaptcha_site_key"
+                    type="text"
+                    label="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_SITE_KEY_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_SITE_KEY_DESC"
+                    filter="string"
+                    showon="captcha_mode:recaptcha_invisible" />
+                <field
+                    name="recaptcha_secret_key"
+                    type="password"
+                    label="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_SECRET_KEY_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_SECRET_KEY_DESC"
+                    showon="captcha_mode:recaptcha_invisible" />
+                <field
+                    name="recaptcha_badge"
+                    type="list"
+                    label="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_BADGE_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_BADGE_DESC"
+                    default="bottomright"
+                    showon="captcha_mode:recaptcha_invisible">
+                    <option value="bottomright">PLG_AJAX_COMMENTS_OPTION_BADGE_BOTTOM_RIGHT</option>
+                    <option value="bottomleft">PLG_AJAX_COMMENTS_OPTION_BADGE_BOTTOM_LEFT</option>
+                    <option value="inline">PLG_AJAX_COMMENTS_OPTION_BADGE_INLINE</option>
+                </field>
+                <field
+                    name="recaptcha_locale"
+                    type="text"
+                    label="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_LOCALE_LABEL"
+                    description="PLG_AJAX_COMMENTS_FIELD_RECAPTCHA_LOCALE_DESC"
+                    filter="cmd"
+                    showon="captcha_mode:recaptcha_invisible" />
             </fieldset>
         </fields>
     </config>

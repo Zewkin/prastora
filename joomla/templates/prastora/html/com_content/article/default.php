@@ -16,8 +16,20 @@ if (isset($item->alias) && strtolower((string) $item->alias) === 'constitution')
     return;
 }
 if (isset($item->catid)) {
+    $categoryId = (int) $item->catid;
+    $categoryAlias = strtolower((string) ($item->category_alias ?? ''));
     $categoryTitle = (string) ($item->category_title ?? '');
-    if (stripos($categoryTitle, 'Канстытуц') !== false || stripos($categoryTitle, 'Конституц') !== false) {
+
+    if (
+        $categoryId === 12
+		|| $categoryId === 18
+        || $categoryAlias === 'projects'
+        || $categoryAlias === 'projects-en'
+        || $categoryAlias === 'projects-ru'
+        || $categoryAlias === 'men-projects-ru'
+        || stripos($categoryTitle, 'Канстытуц') !== false
+        || stripos($categoryTitle, 'Конституц') !== false
+    ) {
         echo $this->loadTemplate('constitution');
         return;
     }
@@ -25,7 +37,11 @@ if (isset($item->catid)) {
 $alias = isset($item->alias) ? strtolower((string) $item->alias) : '';
 $specialLayouts = [
     'about-us' => 'about',
+    'about-us-en' => 'about',
+    'about-us-ru' => 'about',
     'faq' => 'faq',
+    'faq-en' => 'faq',
+    'faq-ru' => 'faq',
     'privacy-policy' => 'privacy',
 ];
 
@@ -76,7 +92,7 @@ $images = json_decode($item->images ?? '{}');
 
 			<?php if (!empty($experts)) : ?>
 				<div class="news_author">
-					<h3><?php echo count($experts) > 1 ? 'Эксперты:' : 'Эксперт:'; ?></h3>
+					<h3><?php echo count($experts) > 1 ? Text::_('TPL_PRASTORA_EXPERTS_PLURAL') : Text::_('TPL_PRASTORA_EXPERTS_SINGULAR'); ?></h3>
 					<?php foreach ($experts as $expert) : ?>
 						<div class="news_author_cont">
 							<?php if (!empty($expert['photo'])) : ?>

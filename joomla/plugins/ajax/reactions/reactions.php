@@ -2,7 +2,6 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Session\Session;
 use Joomla\Database\ParameterType;
@@ -32,9 +31,11 @@ class PlgAjaxReactions extends CMSPlugin
             if (!$articleId || $sectionId === '' || !in_array($type, ['like', 'dislike'], true)) {
                 return $this->json(['ok' => false, 'error' => 'bad_params']);
             }
-            $ip = $this->getClientIp($app);
-            $ipHash = $ip !== null ? sha1($ip) : null;
-            if ($ipHash && $this->hasIpVote($db, $articleId, $sectionId, $ipHash)) {
+            $clientToken = $this->normalizeClientToken($input->getString('client_token', ''));
+            if ($clientToken === '') {
+                return $this->json(['ok' => false, 'error' => 'missing_token']);
+            }
+            if ($this->hasTokenVote($db, $articleId, $sectionId, $clientToken)) {
                 return $this->json(['ok' => false, 'error' => 'already_voted']);
             }
             $column = $type === 'like' ? 'likes' : 'dislikes';
@@ -75,9 +76,7 @@ class PlgAjaxReactions extends CMSPlugin
                 }
             }
             $row = $this->fetchRow($db, $articleId, $sectionId);
-            if ($ipHash) {
-                $this->storeVoteLog($db, $articleId, $sectionId, $ipHash, $type);
-            }
+            $this->storeVoteLog($db, $articleId, $sectionId, $clientToken, $type);
             return $this->json(['ok' => true, 'likes' => (int) ($row->likes ?? 0), 'dislikes' => (int) ($row->dislikes ?? 0)]);
         }
 
@@ -129,36 +128,24 @@ class PlgAjaxReactions extends CMSPlugin
             id INT AUTO_INCREMENT PRIMARY KEY,
             article_id INT NOT NULL,
             section_id VARCHAR(255) NOT NULL,
-            ip_hash CHAR(40) NOT NULL,
+            client_token VARCHAR(128) NOT NULL,
             vote_type ENUM(\'like\', \'dislike\') NOT NULL,
             created DATETIME NOT NULL,
-            UNIQUE KEY uniq_vote (article_id, section_id, ip_hash)
+            UNIQUE KEY uniq_vote (article_id, section_id, client_token)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;')->execute();
-    }
 
-    private function getClientIp($app): ?string
-    {
-        $server = $app->input->server;
-        $headers = [
-            'HTTP_X_FORWARDED_FOR',
-            'HTTP_CLIENT_IP',
-            'REMOTE_ADDR',
-        ];
-        foreach ($headers as $header) {
-            $value = trim((string) $server->get($header));
-            if ($value === '') {
-                continue;
+        try {
+            $columns = $db->getTableColumns('#__constitution_reaction_logs', true);
+            if (isset($columns['ip_hash']) && !isset($columns['client_token'])) {
+                $db->setQuery('ALTER TABLE ' . $db->quoteName('#__constitution_reaction_logs')
+                    . ' CHANGE ' . $db->quoteName('ip_hash') . ' ' . $db->quoteName('client_token') . ' VARCHAR(128) NOT NULL')->execute();
             }
-            if ($header === 'HTTP_X_FORWARDED_FOR' && strpos($value, ',') !== false) {
-                $parts = array_map('trim', explode(',', $value));
-                $value = $parts[0] ?? $value;
-            }
-            return $value;
+        } catch (\Throwable $e) {
+            // Ignore migration errors
         }
-        return null;
     }
 
-    private function hasIpVote($db, int $articleId, string $sectionId, string $ipHash): bool
+    private function hasTokenVote($db, int $articleId, string $sectionId, string $clientToken): bool
     {
         $aidParam = (int) $articleId;
         $sidParam = (string) $sectionId;
@@ -167,15 +154,15 @@ class PlgAjaxReactions extends CMSPlugin
             ->from($db->quoteName('#__constitution_reaction_logs'))
             ->where($db->quoteName('article_id') . ' = :aid')
             ->where($db->quoteName('section_id') . ' = :sid')
-            ->where($db->quoteName('ip_hash') . ' = :ip')
+            ->where($db->quoteName('client_token') . ' = :token')
             ->bind(':aid', $aidParam, ParameterType::INTEGER)
             ->bind(':sid', $sidParam, ParameterType::STRING)
-            ->bind(':ip', $ipHash, ParameterType::STRING);
+            ->bind(':token', $clientToken, ParameterType::STRING);
         $count = (int) $db->setQuery($query)->loadResult();
         return $count > 0;
     }
 
-    private function storeVoteLog($db, int $articleId, string $sectionId, string $ipHash, string $type): void
+    private function storeVoteLog($db, int $articleId, string $sectionId, string $clientToken, string $type): void
     {
         $aidParam = (int) $articleId;
         $sidParam = (string) $sectionId;
@@ -185,20 +172,35 @@ class PlgAjaxReactions extends CMSPlugin
             ->columns([
                 $db->quoteName('article_id'),
                 $db->quoteName('section_id'),
-                $db->quoteName('ip_hash'),
+                $db->quoteName('client_token'),
                 $db->quoteName('vote_type'),
                 $db->quoteName('created'),
             ])
-            ->values(':aid,:sid,:ip,:type,NOW()')
+            ->values(':aid,:sid,:token,:type,NOW()')
             ->bind(':aid', $aidParam, ParameterType::INTEGER)
             ->bind(':sid', $sidParam, ParameterType::STRING)
-            ->bind(':ip', $ipHash, ParameterType::STRING)
+            ->bind(':token', $clientToken, ParameterType::STRING)
             ->bind(':type', $typeParam, ParameterType::STRING);
         try {
             $db->setQuery($query)->execute();
         } catch (\RuntimeException $e) {
-            // Уникальный ключ не даёт повторно записать тот же IP — можно игнорировать.
+            // Уникальный ключ не даёт повторно записать тот же токен — можно игнорировать.
         }
+    }
+
+    private function normalizeClientToken(string $token): string
+    {
+        $token = trim($token);
+        if ($token === '') {
+            return '';
+        }
+        if (strlen($token) > 128) {
+            $token = substr($token, 0, 128);
+        }
+        if (!preg_match('/^[A-Za-z0-9_\-]{8,128}$/', $token)) {
+            return '';
+        }
+        return $token;
     }
 
     private function fetchRow($db, int $articleId, string $sectionId)

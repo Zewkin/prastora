@@ -15,20 +15,115 @@
                 <option value="1">JYES</option>
             </field>
         </fieldset>
+
+        <fieldset name="notifications" label="COM_COMMENTMODERATION_CONFIG_NOTIFICATIONS_LABEL">
+            <field
+                name="notification_enable_admin"
+                type="radio"
+                label="COM_COMMENTMODERATION_CONFIG_NOTIFY_ADMIN_ENABLE_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_NOTIFY_ADMIN_ENABLE_DESC"
+                layout="joomla.form.field.radio.switcher"
+                default="1"
+                filter="integer"
+            >
+                <option value="1">JYES</option>
+                <option value="0">JNO</option>
+            </field>
+            <field
+                name="notification_admin_email"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_ADMIN_EMAIL_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_ADMIN_EMAIL_DESC"
+                filter="string"
+            />
+            <field
+                name="notification_enable_user"
+                type="radio"
+                label="COM_COMMENTMODERATION_CONFIG_NOTIFY_USER_ENABLE_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_NOTIFY_USER_ENABLE_DESC"
+                layout="joomla.form.field.radio.switcher"
+                default="1"
+                filter="integer"
+            >
+                <option value="1">JYES</option>
+                <option value="0">JNO</option>
+            </field>
+            <field
+                name="notification_from_email"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_FROM_EMAIL_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_FROM_EMAIL_DESC"
+                filter="string"
+            />
+            <field
+                name="notification_from_name"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_FROM_NAME_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_FROM_NAME_DESC"
+                filter="string"
+            />
+            <field
+                name="notification_imap_host"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_HOST_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_HOST_DESC"
+                filter="string"
+            />
+            <field
+                name="notification_imap_port"
+                type="number"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_PORT_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_PORT_DESC"
+                default="993"
+                filter="integer"
+            />
+            <field
+                name="notification_imap_encryption"
+                type="list"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_ENCRYPTION_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_ENCRYPTION_DESC"
+                default="ssl"
+            >
+                <option value="ssl">COM_COMMENTMODERATION_CONFIG_IMAP_ENCRYPTION_SSL</option>
+                <option value="tls">COM_COMMENTMODERATION_CONFIG_IMAP_ENCRYPTION_TLS</option>
+                <option value="none">COM_COMMENTMODERATION_CONFIG_IMAP_ENCRYPTION_NONE</option>
+            </field>
+            <field
+                name="notification_imap_user"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_USER_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_USER_DESC"
+                filter="string"
+            />
+            <field
+                name="notification_imap_password"
+                type="password"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_PASSWORD_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_PASSWORD_DESC"
+            />
+            <field
+                name="notification_imap_folder"
+                type="text"
+                label="COM_COMMENTMODERATION_CONFIG_IMAP_FOLDER_LABEL"
+                description="COM_COMMENTMODERATION_CONFIG_IMAP_FOLDER_DESC"
+                default="Sent"
+                filter="string"
+            />
+        </fieldset>
     </fields>
 
     <fields name="permissions">
         <fieldset name="component" label="JCONFIG_PERMISSIONS_LABEL" description="JCONFIG_PERMISSIONS_DESC">
-            <field
-                name="rules"
-                type="rules"
-                label="JCONFIG_PERMISSIONS_LABEL"
-                filter="rules"
-                validate="rules"
-                component="com_commentmoderation"
-                section="component"
-            />
-        </fieldset>
+        <field
+            name="rules"
+            type="rules"
+            label="JCONFIG_PERMISSIONS_LABEL"
+            filter="rules"
+            validate="rules"
+            component="com_commentmoderation"
+            section="component"
+        />
+    </fieldset>
     </fields>
 </config>
 

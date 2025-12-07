@@ -7,12 +7,47 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\Content\Site\Helper\RouteHelper as ContentHelperRoute;
+use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 use Joomla\CMS\Categories\Categories;
 use Joomla\CMS\Helper\TagsHelper;
 
 $app     = Factory::getApplication();
 $template = $app->getTemplate();
 $tplUri  = rtrim(Uri::root(true), '/') . '/templates/' . $template;
+
+if (!function_exists('prastoraGetIntroFieldText')) {
+	function prastoraGetIntroFieldText(?object $item): string
+	{
+		static $cache = [];
+		if (!$item) {
+			return '';
+		}
+		$id = isset($item->id) ? (int) $item->id : 0;
+		if ($id > 0 && array_key_exists($id, $cache)) {
+			return $cache[$id];
+		}
+		$value = '';
+		try {
+			$fields = FieldsHelper::getFields('com_content.article', $item, true);
+			foreach ($fields as $field) {
+				if ($field->name === 'intro' && isset($field->rawvalue)) {
+					$candidate = is_scalar($field->rawvalue) ? (string) $field->rawvalue : '';
+					$candidate = trim(strip_tags($candidate));
+					if ($candidate !== '') {
+						$value = $candidate;
+					}
+					break;
+				}
+			}
+		} catch (\Throwable $exception) {
+			$value = '';
+		}
+		if ($id > 0) {
+			$cache[$id] = $value;
+		}
+		return $value;
+	}
+}
 
 $items = $this->items ?? [];
 $tagsHelper = new TagsHelper();
@@ -32,22 +67,63 @@ $fromDate  = $input->getString('from', '');
 $toDate    = $input->getString('to', '');
 $filterTag = trim($input->getString('tag', ''));
 
-// Child categories of current
-$catsApi = Categories::getInstance('Content');
-$parent  = $catsApi->get($this->category->parent_id ?: 1);
-$siblings = $parent ? $parent->getChildren() : [];
-// filter out Uncategorised and hidden
-$siblings = array_values(array_filter($siblings, function($sib){
-    $alias = property_exists($sib, 'alias') ? $sib->alias : '';
-    $published = property_exists($sib, 'published') ? (int)$sib->published : 1;
-    return $published === 1 && $alias !== 'uncategorised';
-}));
+// Get subcategories of current category for filter menu (direct SQL to avoid nested set issues)
+$langTag = $app->getLanguage()->getTag();
+$db = Factory::getDbo();
+$query = $db->getQuery(true)
+    ->select('id, title, alias')
+    ->from($db->quoteName('#__categories'))
+    ->where('parent_id = ' . (int) $this->category->id)
+    ->where('published = 1')
+    ->where('extension = ' . $db->quote('com_content'))
+    ->where('alias != ' . $db->quote('uncategorised'))
+    ->where('(language = ' . $db->quote('*') . ' OR language = ' . $db->quote($langTag) . ')')
+    ->order('lft ASC');
+$db->setQuery($query);
+$subcategories = $db->loadObjectList() ?: [];
 
-// Apply category filter
-if ($filterCat > 0) {
+// Collect all subcategory IDs for "All" filter
+$subcatIds = array_map(function($s) { return (int) $s->id; }, $subcategories);
+
+// Apply category filter - load from subcategory if selected
+if ($filterCat > 0 && in_array($filterCat, $subcatIds, true)) {
+    // Load articles from the selected subcategory
+    $query = $db->getQuery(true)
+        ->select('a.*, c.title AS category_title, c.alias AS category_alias')
+        ->from($db->quoteName('#__content', 'a'))
+        ->join('LEFT', $db->quoteName('#__categories', 'c') . ' ON c.id = a.catid')
+        ->where('a.catid = ' . (int) $filterCat)
+        ->where('a.state = 1')
+        ->where('a.access = 1')
+        ->order('a.publish_up DESC, a.created DESC');
+    $db->setQuery($query);
+    $items = $db->loadObjectList() ?: [];
+} elseif ($filterCat > 0) {
+    // Filter within current category items
     $items = array_values(array_filter($items, function ($it) use ($filterCat) {
         return (int) $it->catid === (int) $filterCat;
     }));
+} else {
+    // "All" - add subcategory articles to current category articles
+    if (!empty($subcatIds)) {
+        $query = $db->getQuery(true)
+            ->select('a.*, c.title AS category_title, c.alias AS category_alias')
+            ->from($db->quoteName('#__content', 'a'))
+            ->join('LEFT', $db->quoteName('#__categories', 'c') . ' ON c.id = a.catid')
+            ->where('a.catid IN (' . implode(',', $subcatIds) . ')')
+            ->where('a.state = 1')
+            ->where('a.access = 1')
+            ->order('a.publish_up DESC, a.created DESC');
+        $db->setQuery($query);
+        $subcatItems = $db->loadObjectList() ?: [];
+        $items = array_merge($items, $subcatItems);
+        // Sort by date
+        usort($items, function($a, $b) {
+            $dateA = strtotime($a->publish_up ?: $a->created);
+            $dateB = strtotime($b->publish_up ?: $b->created);
+            return $dateB - $dateA;
+        });
+    }
 }
 
 // Apply date filter
@@ -114,20 +190,73 @@ if (is_object($pagination)) {
 					$basePath = $base->getPath();
 					$sep = empty($baseQuery) ? '?' : ('?' . http_build_query($baseQuery) . '&');
 					$allActive = $filterCat === 0 ? ' projects_nav_menu_item_active' : '';
-					echo '<div class="projects_nav_menu_item' . $allActive . '"><a href="' . Route::_($basePath . $sep . 'type=0') . '"><p>Усё</p></a></div>';
-					if (empty($siblings)) {
+					echo '<div class="projects_nav_menu_item' . $allActive . '"><a href="' . Route::_($basePath . $sep . 'type=0') . '"><p>' . htmlspecialchars(Text::_('TPL_PRASTORA_PROJECTS_FILTER_ALL'), ENT_QUOTES, 'UTF-8') . '</p></a></div>';
+					if (empty($subcategories)) {
 						$active = ($filterCat === (int) $this->category->id) ? ' projects_nav_menu_item_active' : '';
 						echo '<div class="projects_nav_menu_item' . $active . '"><a href="' . Route::_($basePath . $sep . 'type=' . (int) $this->category->id) . '"><p>' . htmlspecialchars($this->category->title, ENT_QUOTES, 'UTF-8') . '</p></a></div>';
 					} else {
-						foreach ($siblings as $sib) {
+						foreach ($subcategories as $sib) {
 							$active = ($filterCat === (int) $sib->id) ? ' projects_nav_menu_item_active' : '';
 							echo '<div class="projects_nav_menu_item' . $active . '"><a href="' . Route::_($basePath . $sep . 'type=' . (int) $sib->id) . '"><p>' . htmlspecialchars($sib->title, ENT_QUOTES, 'UTF-8') . '</p></a></div>';
 						}
 					}
 				?>
 			</div>
-			<div class="projects_nav_action"><img src="<?php echo $tplUri; ?>/assets/icons/nav-ac-1.svg" alt="" /></div>
-			<div class="projects_nav_action"><img src="<?php echo $tplUri; ?>/assets/icons/nav-ac-2.svg" alt="" /></div>
+			<!-- <div class="projects_nav_action"><img src="<?php echo $tplUri; ?>/assets/icons/nav-ac-1.svg" alt="" /></div> -->
+			<div class="projects_nav_action_group">
+				<div
+					class="projects_nav_action projects_nav_action_filter"
+					data-date-filter-toggle
+					role="button"
+					tabindex="0"
+					aria-haspopup="dialog"
+					aria-expanded="false"
+					aria-controls="projects-date-filter"
+				>
+					<img src="<?php echo $tplUri; ?>/assets/icons/nav-ac-2.svg" alt="" />
+				</div>
+				<div
+					class="projects_datepicker"
+					id="projects-date-filter"
+					data-date-filter
+					data-initial-from="<?php echo htmlspecialchars($fromDate, ENT_QUOTES, 'UTF-8'); ?>"
+					data-initial-to="<?php echo htmlspecialchars($toDate, ENT_QUOTES, 'UTF-8'); ?>"
+					hidden
+				>
+					<div class="projects_datepicker_inner">
+						<div class="projects_datepicker_header">
+							<button type="button" class="projects_datepicker_nav" data-date-filter-prev aria-label="<?php echo Text::_('TPL_PRASTORA_PROJECTS_DATEPREV'); ?>">
+								<span aria-hidden="true">‹</span>
+							</button>
+							<p class="projects_datepicker_month" data-date-filter-label></p>
+							<button type="button" class="projects_datepicker_nav" data-date-filter-next aria-label="<?php echo Text::_('TPL_PRASTORA_PROJECTS_DATENEXT'); ?>">
+								<span aria-hidden="true">›</span>
+							</button>
+						</div>
+						<div class="projects_datepicker_weekdays">
+							<span>Su</span>
+							<span>Mo</span>
+							<span>Tu</span>
+							<span>We</span>
+							<span>Th</span>
+							<span>Fr</span>
+							<span>Sa</span>
+						</div>
+						<div class="projects_datepicker_grid" data-date-filter-grid></div>
+						<div class="projects_datepicker_footer">
+							<div class="projects_datepicker_selection is-empty" data-date-filter-selection data-empty-text="<?php echo htmlspecialchars(Text::_('TPL_PRASTORA_PROJECTS_DATE_EMPTY'), ENT_QUOTES, 'UTF-8'); ?>">
+								<span data-date-filter-from><?php echo Text::_('TPL_PRASTORA_PROJECTS_DATE_EMPTY'); ?></span>
+								<span data-date-filter-separator></span>
+								<span data-date-filter-to></span>
+							</div>
+							<div class="projects_datepicker_actions">
+								<button type="button" class="projects_datepicker_reset" data-date-filter-reset><?php echo Text::_('TPL_PRASTORA_PROJECTS_DATE_RESET'); ?></button>
+								<button type="button" class="projects_datepicker_apply" data-date-filter-apply><?php echo Text::_('TPL_PRASTORA_PROJECTS_DATE_APPLY'); ?></button>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<div class="projects_cards">
@@ -169,8 +298,9 @@ if (is_object($pagination)) {
 				if (!empty($item->publish_up) || !empty($item->created)) {
 					$publishDate = JHtml::_('date', $item->publish_up ?: $item->created, Text::_('DATE_FORMAT_LC3'));
 				}
-				$rawIntro = trim(strip_tags($item->introtext));
-				$summary = $rawIntro !== '' ? HTMLHelper::_('string.truncate', $rawIntro, 180, true, false) : '';
+			$customIntro = prastoraGetIntroFieldText($item);
+			$rawIntro = $customIntro !== '' ? $customIntro : trim(strip_tags($item->introtext));
+			$summary = $rawIntro !== '' ? HTMLHelper::_('string.truncate', $rawIntro, 180, true, false) : '';
 				$readMoreLabel = Text::sprintf('COM_CONTENT_READ_MORE_TITLE', str_replace('%', '%%', (string) $item->title));
 			?>
 			<div class="project_card">
@@ -228,7 +358,7 @@ if (is_object($pagination)) {
 			if ($current < $pagesTotal) {
 				$nextStart = $current * $limit;
 				$nextLink  = Route::_($base . $sep . 'start=' . $nextStart);
-				echo '<a href="' . $nextLink . '" class="next">' . Text::_('Далей') . '</a>';
+				echo '<a href="' . $nextLink . '" class="next">' . Text::_('TPL_PRASTORA_PAGINATION_NEXT') . '</a>';
 			}
 		?>
 	</div>

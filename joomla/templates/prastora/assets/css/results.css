@@ -28,13 +28,25 @@
   gap: 40px;
   padding-left: 20px;
 }
-.results_actions div {
+.results_action_group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.results_action_button {
   cursor: pointer;
   width: 37.5px;
   height: 32.5px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.results_action_button_filter {
+  border-radius: 16px;
+  transition: background 0.3s ease;
+}
+.results_action_button_filter.projects_nav_action_active {
+  background: rgb(236, 225, 255);
 }
 
 .results_item {
@@ -112,6 +124,9 @@
   .results_actions {
     padding: 0;
     gap: 20px;
+  }
+  .results_action_group {
+    width: auto;
   }
   .results_top {
     margin-bottom: 20px;

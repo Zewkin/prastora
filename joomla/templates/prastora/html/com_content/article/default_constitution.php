@@ -8,6 +8,7 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Captcha\Captcha;
 use Joomla\Registry\Registry;
+use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
 $app     = Factory::getApplication();
 $template = $app->getTemplate();
@@ -17,10 +18,15 @@ $commentsPlugin = PluginHelper::getPlugin('ajax', 'comments');
 $commentsParams = $commentsPlugin ? new Registry($commentsPlugin->params) : new Registry();
 $commentsModerationMode = (string) $commentsParams->get('moderation_mode', 'premoderation');
 $captchaEnabled = (bool) $commentsParams->get('captcha_enabled', 0);
+$captchaMode = (string) $commentsParams->get('captcha_mode', 'joomla');
 $captchaPlugin = (string) $commentsParams->get('captcha_plugin', '');
+$recaptchaSiteKey = trim((string) $commentsParams->get('recaptcha_site_key', ''));
+$recaptchaBadge = (string) $commentsParams->get('recaptcha_badge', 'bottomright');
+$recaptchaLocale = trim((string) $commentsParams->get('recaptcha_locale', ''));
+$useInvisibleRecaptcha = $captchaEnabled && $captchaMode === 'recaptcha_invisible' && $recaptchaSiteKey !== '';
 $captchaInstance = null;
 
-if ($captchaEnabled && $captchaPlugin !== '') {
+if ($captchaEnabled && !$useInvisibleRecaptcha && $captchaPlugin !== '') {
     try {
         PluginHelper::importPlugin('captcha', $captchaPlugin);
         $captchaInstance = Captcha::getInstance($captchaPlugin, ['namespace' => 'ajaxcomments']);
@@ -29,14 +35,90 @@ if ($captchaEnabled && $captchaPlugin !== '') {
     }
 }
 
+$captchaActive = $captchaEnabled && ($useInvisibleRecaptcha || $captchaInstance);
+$captchaModeAttribute = !$captchaActive ? 'none' : ($useInvisibleRecaptcha ? 'recaptcha_invisible' : 'joomla');
+
 $item = $this->item ?? null;
 if (!$item || !\is_object($item)) {
     echo '<div class="container"><div class="colored_w"><p>Article not found.</p></div></div>';
     return;
 }
 
+$customIntroHtml = null;
+$downloadPdfUrl = '';
+
+$extractPdfPath = static function ($value) use (&$extractPdfPath): string {
+    if (\is_array($value)) {
+        if (isset($value['file']) && is_scalar($value['file'])) {
+            return trim((string) $value['file']);
+        }
+
+        foreach ($value as $subValue) {
+            $candidate = $extractPdfPath($subValue);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return '';
+    }
+
+    if (\is_object($value)) {
+        return $extractPdfPath(get_object_vars($value));
+    }
+
+    if (\is_string($value)) {
+        $stringValue = trim($value);
+
+        if ($stringValue === '') {
+            return '';
+        }
+
+        $decoded = json_decode($stringValue, true);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $extractPdfPath($decoded);
+        }
+
+        return $stringValue;
+    }
+
+    if (is_scalar($value)) {
+        return trim((string) $value);
+    }
+
+    return '';
+};
+
+try {
+    $fields = FieldsHelper::getFields('com_content.article', $item, true);
+    foreach ($fields as $field) {
+        $fieldName = (string) ($field->name ?? '');
+
+        if ($fieldName === 'intro' && isset($field->rawvalue)) {
+            $value = is_scalar($field->rawvalue) ? (string) $field->rawvalue : '';
+            if (trim(strip_tags($value)) !== '') {
+                $customIntroHtml = (string) $field->rawvalue;
+            }
+        }
+
+        if (($fieldName === 'constitution_pdf' || $fieldName === 'constitution-pdf') && isset($field->rawvalue)) {
+            $mediaValue = $extractPdfPath($field->rawvalue);
+
+            if ($mediaValue !== '') {
+                $isAbsolute = preg_match('#^(?:https?:)?//#i', $mediaValue);
+                $downloadPdfUrl = $isAbsolute
+                    ? $mediaValue
+                    : rtrim(Uri::root(), '/') . '/' . ltrim($mediaValue, '/');
+            }
+        }
+    }
+} catch (\Throwable $exception) {
+    $customIntroHtml = null;
+}
+
 $rawHtml = (string) (($item->text ?? '') !== '' ? $item->text : ($item->fulltext ?? ''));
-$introHeaderHtml = trim((string) ($item->introtext ?? ''));
+$introHeaderHtml = $customIntroHtml !== null ? trim((string) $customIntroHtml) : trim((string) ($item->introtext ?? ''));
 if ($introHeaderHtml !== '') {
     $normalizedIntro = preg_replace('/\s+/u', ' ', trim(strip_tags($introHeaderHtml)));
     $normalizedFull  = preg_replace('/\s+/u', ' ', trim(strip_tags($rawHtml)));
@@ -237,19 +319,23 @@ if (empty($sections)) {
                     <?php echo $introHeaderHtml; ?>
                 <?php endif; ?>
                 <div class="header_actions">
-                  <a href="#"><button class="main_btn"><?php echo Text::_('Даведацца Больш'); ?></button></a>
-                  <a href="#"><button class="main_btn line_btn"><?php echo Text::_('Спампаваць PDF'); ?></button></a>
+                  <a href="#"><button class="main_btn"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_BTN_LEARN_MORE'); ?></button></a>
+                  <?php if ($downloadPdfUrl !== '') : ?>
+                  <a href="<?php echo htmlspecialchars($downloadPdfUrl, ENT_QUOTES, 'UTF-8'); ?>" class="main_btn line_btn" target="_blank" rel="noopener" download>
+                      <?php echo Text::_('TPL_PRASTORA_CONSTITUTION_BTN_DOWNLOAD'); ?>
+                  </a>
+                  <?php endif; ?>
                 </div>
-                <div class="cons_header_desc">
-                    <p>Невялікі тэкст пра бяспеку. Прастора – гэта адкрытая платформа, дзе беларусы могуць <br />удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.</p>
-                </div>
+                <!-- <div class="cons_header_desc">
+                    <p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_SECURITY_TEXT'); ?></p>
+                </div> -->
             </div>
         </div>
         <img class="cons_img" src="<?php echo $tplUri; ?>/assets/images/cons-img.png" alt="" />
     </div>
-    <div class="cons_header_desc">
-        <p>Невялікі тэкст пра бяспеку. Прастора – гэта адкрытая платформа, дзе беларусы могуць <br />удзельнічаць у распрацоўцы законаў, рэформаў і Канстытуцыі новай Беларусі.</p>
-    </div>
+    <!-- <div class="cons_header_desc">
+        <p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_SECURITY_TEXT'); ?></p>
+    </div> -->
 </div>
 
 <div class="cons_articles container">
@@ -257,12 +343,12 @@ if (empty($sections)) {
         <div class="articles_list_block_top">
             <div class="nav_search">
                 <img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-                <input id="tocSearch" type="text" placeholder="Пошук па Зместу..." />
+                <input id="tocSearch" type="text" placeholder="<?php echo Text::_('TPL_PRASTORA_CONSTITUTION_TOC_SEARCH'); ?>" />
             </div>
-            <div class="info"><img src="<?php echo $tplUri; ?>/assets/icons/info.svg" alt="" /></div>
+            <!-- <div class="info"><img src="<?php echo $tplUri; ?>/assets/icons/info.svg" alt="" /></div> -->
         </div>
         <div class="articles_list">
-            <h3>Змест</h3>
+            <h3><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_TOC_TITLE'); ?></h3>
             <?php foreach ($sections as $secIdx => $sec) : ?>
             <div class="articles_list_item<?php echo $secIdx === 0 ? ' articles_list_item_active' : ''; ?>" data-section-id="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="articles_list_item_title" data-target="<?php echo htmlspecialchars($sec['id'], ENT_QUOTES, 'UTF-8'); ?>">
@@ -311,7 +397,7 @@ if (empty($sections)) {
                     <div class="article_reaction" data-role="reaction-like"><img src="<?php echo $tplUri; ?>/assets/icons/like.svg" alt="" /><p data-role="count-like">0</p></div>
                     <div class="article_reaction" data-role="reaction-dislike"><img src="<?php echo $tplUri; ?>/assets/icons/dislike.svg" alt="" /><p data-role="count-dislike">0</p></div>
                     <div class="article_reaction" data-role="open-comments"><img src="<?php echo $tplUri; ?>/assets/icons/comment.svg" alt="" /><p>0</p></div>
-                    <div class="article_reaction article_commenting" data-role="comment-open"><p><?php echo Text::_('Каментаваць'); ?></p></div>
+                    <div class="article_reaction article_commenting" data-role="comment-open"><p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_COMMENT_BUTTON'); ?></p></div>
                 </div>
             </div>
             <div class="article_block_item_content" data-role="article-content">
@@ -322,51 +408,73 @@ if (empty($sections)) {
         <?php endforeach; ?>
         <div class="article_block_info">
             <img src="<?php echo $tplUri; ?>/assets/icons/arc-info.svg" alt="" />
-            <p>1. Чалавек, яго правы і свабоды з'яўляюцца найвышэйшай каштоўнасцю. Галоўны абавязак дзяржавы - прызнанне, выкананне, забеспячэнне і абарона правоў і свабод чалавека, стварэнне ўмоў для шчаслівага жыцця, свабоднага і годнага развіцця асобы.</p>
+            <p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_INFO_TEXT'); ?></p>
         </div>
     </div>
 
-    <div class="comments_block" data-comments="1" data-article-id="<?php echo (int) $item->id; ?>" data-like-icon="<?php echo $tplUri; ?>/assets/icons/like.svg" data-dislike-icon="<?php echo $tplUri; ?>/assets/icons/dislike.svg" data-reply-icon="<?php echo $tplUri; ?>/assets/icons/comment.svg" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaInstance ? '1' : '0'; ?>">
+    <div class="comments_block" data-comments="1" data-article-id="<?php echo (int) $item->id; ?>" data-like-icon="<?php echo $tplUri; ?>/assets/icons/like.svg" data-dislike-icon="<?php echo $tplUri; ?>/assets/icons/dislike.svg" data-reply-icon="<?php echo $tplUri; ?>/assets/icons/comment.svg" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaActive ? '1' : '0'; ?>" data-captcha-mode="<?php echo htmlspecialchars($captchaModeAttribute, ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-sitekey="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaSiteKey : '', ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-badge="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaBadge : '', ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-locale="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaLocale : '', ENT_QUOTES, 'UTF-8'); ?>">
         <div class="comments_list">
             <div class="comment_list_title" data-role="list-header">
                 <div class="comment_list_title_inner">
                     <svg class="comment_list_title_icon" aria-hidden="true" viewBox="0 0 16.9121 15" focusable="false">
                         <path d="M8.18359 0C3.66406 0 0 3.35742 0 7.5C0 11.6426 3.66406 15 8.18359 15C9.35352 15 10.4668 14.7754 11.4727 14.3701C11.5996 14.3193 11.7344 14.29 11.8691 14.29L15.9121 14.29C16.6035 14.29 17.0859 13.6045 16.8535 12.9531L15.9766 10.502C15.8926 10.2686 15.9023 10.0146 15.9824 9.78125C16.2324 9.06152 16.3691 8.29492 16.3691 7.5C16.3691 3.35742 12.7051 0 8.18359 0Z" />
                     </svg>
-                    <span data-role="list-title">Усе Каментары</span>
+                    <span data-role="list-title"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_COMMENTS_ALL'); ?></span>
                 </div>
-                <button type="button" class="comment_back_btn" data-role="back-to-all" hidden>Усе каментары</button>
+                <button type="button" class="comment_back_btn" data-role="back-to-all" hidden><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_COMMENTS_BACK'); ?></button>
             </div>
             <div class="comments_container" data-role="comments-list">
-                <div class="comments_empty" data-role="comments-empty">Пакуль няма каментароў.</div>
+                <div class="comments_empty" data-role="comments-empty"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_COMMENTS_EMPTY'); ?></div>
             </div>
         </div>
-        <form class="auth_comment" data-role="comment-form" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaInstance ? '1' : '0'; ?>" novalidate>
+        <form class="auth_comment" data-role="comment-form" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaActive ? '1' : '0'; ?>" novalidate>
             <div class="comment_form_state" data-role="reply-context" hidden>
-                <span data-role="reply-label">Вы адказваеце на каментар.</span>
-                <button type="button" class="comment_reply_clear" data-role="reply-clear">Адмяніць</button>
+                <span data-role="reply-label"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_REPLY_LABEL'); ?></span>
+                <button type="button" class="comment_reply_clear" data-role="reply-clear"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_REPLY_CLEAR'); ?></button>
             </div>
             <div class="comment_form_notice" data-role="form-notice" hidden></div>
             <div class="comment_form_error" data-role="form-error" hidden></div>
-            <input type="text" name="author_name" placeholder="Ананімны Карыстальнік" maxlength="255" />
-            <input type="email" name="author_email" placeholder="Дадаць пошту" maxlength="255" />
-            <textarea name="body" rows="4" placeholder="На маю думку тут лепей казаць што..." maxlength="5000" required></textarea>
-            <?php if ($captchaInstance) : ?>
+            <input type="text" name="author_name" placeholder="<?php echo Text::_('TPL_PRASTORA_CONSTITUTION_AUTHOR_PLACEHOLDER'); ?>" maxlength="255" />
+            <input type="email" name="author_email" placeholder="<?php echo Text::_('TPL_PRASTORA_CONSTITUTION_EMAIL_PLACEHOLDER'); ?>" maxlength="255" />
+            <textarea name="body" rows="4" placeholder="<?php echo Text::_('TPL_PRASTORA_CONSTITUTION_BODY_PLACEHOLDER'); ?>" maxlength="5000" required></textarea>
+            <?php if ($useInvisibleRecaptcha) : ?>
+            <?php
+            $recaptchaPrivacyLink = '<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">' . Text::_('TPL_PRASTORA_RECAPTCHA_PRIVACY') . '</a>';
+            $recaptchaTermsLink = '<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">' . Text::_('TPL_PRASTORA_RECAPTCHA_TERMS') . '</a>';
+            $recaptchaNoticeText = Text::sprintf('TPL_PRASTORA_RECAPTCHA_NOTICE', $recaptchaPrivacyLink, $recaptchaTermsLink);
+            ?>
+            <input type="hidden" name="g-recaptcha-response" value="" data-role="recaptcha-response" />
+            <div class="comment_form_captcha comment_form_captcha--invisible" data-role="captcha-wrapper">
+                <div class="g-recaptcha" data-role="recaptcha-placeholder"></div>
+                <noscript>
+                    <span><?php echo $recaptchaNoticeText; ?></span>
+                </noscript>
+            </div>
+            <p class="comment_form_notice comment_form_notice--static comment_form_notice--recaptcha">
+                <?php echo $recaptchaNoticeText; ?>
+            </p>
+            <?php elseif ($captchaInstance) : ?>
             <div class="comment_form_captcha" data-role="captcha-wrapper">
                 <?php echo $captchaInstance->display('ajaxcomments-comment-' . (int) $item->id, 'ajaxcomments-captcha-' . (int) $item->id); ?>
             </div>
             <?php endif; ?>
             <div class="send_btn">
-                <button class="main_btn" type="submit"><?php echo Text::_('Каментаваць'); ?></button>
+                <button class="main_btn" type="submit"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_COMMENT_BUTTON'); ?></button>
             </div>
         </form>
     </div>
 </div>
 
-<div class="fixed_nav">
+<div class="fixed_nav" data-role="mobile-fixed-nav">
     <div class="fixed_nav_left">
-        <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-1.svg" alt="" /></div><p>Змест</p></div>
-        <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-2.svg" alt="" /></div><p>Дапамога</p></div>
+        <div class="fixed_nav_item" data-role="toggle-contents"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-1.svg" alt="" /></div><p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_FIXED_TOC'); ?></p></div>
+        <!-- <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-2.svg" alt="" /></div><p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_FIXED_HELP'); ?></p></div> -->
     </div>
-    <div class="fixed_nav_item"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-3.svg" alt="" /></div><p>Усе Каментары</p></div>
+    <div class="fixed_nav_item" data-role="toggle-comments"><div><img src="<?php echo $tplUri; ?>/assets/icons/f-nav-3.svg" alt="" /></div><p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_FIXED_COMMENTS'); ?></p></div>
+</div>
+
+<div class="mobile_overlay" data-role="mobile-overlay" hidden>
+    <div class="mobile_overlay_inner">
+        <div class="mobile_overlay_content" data-role="mobile-overlay-content"></div>
+    </div>
 </div>

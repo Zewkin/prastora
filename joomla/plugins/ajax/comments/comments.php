@@ -10,6 +10,16 @@ use Joomla\CMS\Session\Session;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
 use Joomla\CMS\Plugin\PluginHelper;
+use ReCaptcha\ReCaptcha;
+use Joomla\Component\Commentmoderation\Administrator\Service\CommentNotificationService;
+
+\JLoader::registerNamespace(
+    'Joomla\\Component\\Commentmoderation',
+    JPATH_ADMINISTRATOR . '/components/com_commentmoderation/src',
+    false,
+    false,
+    'psr4'
+);
 
 class PlgAjaxComments extends CMSPlugin
 {
@@ -267,6 +277,9 @@ class PlgAjaxComments extends CMSPlugin
         $db->insertObject('#__constitution_comments', $record);
         $newId = (int) $db->insertid();
         $row = $this->loadCommentRow($db, $newId);
+        $articleRow = $this->loadArticleRow($db, $articleId);
+
+        $this->notifyOnCreate($db, $row ?? [], $parentRow ?? null, $articleRow, $status === self::STATUS_APPROVED);
 
         if ($status !== self::STATUS_APPROVED) {
             return $this->json(['ok' => true, 'pending' => true]);
@@ -293,6 +306,7 @@ class PlgAjaxComments extends CMSPlugin
         if ($clientToken === '') {
             return $this->json(['ok' => false, 'error' => 'missing_token']);
         }
+        $ipHash = $this->hashIp($this->getRemoteAddress());
 
         $type = $input->getCmd('type', 'like');
         if (!in_array($type, ['like', 'dislike'], true)) {
@@ -304,7 +318,7 @@ class PlgAjaxComments extends CMSPlugin
             return $this->json(['ok' => false, 'error' => 'comment_not_found']);
         }
 
-        if ($this->hasCommentVote($db, $commentId, $clientToken)) {
+        if ($this->hasCommentVote($db, $commentId, $clientToken, $ipHash)) {
             return $this->json(['ok' => false, 'error' => 'already_voted']);
         }
 
@@ -346,12 +360,14 @@ class PlgAjaxComments extends CMSPlugin
             ->columns([
                 $db->quoteName('comment_id'),
                 $db->quoteName('client_token'),
+                $db->quoteName('ip_hash'),
                 $db->quoteName('vote_type'),
                 $db->quoteName('created'),
             ])
-            ->values(':cid,:token,:type,:created')
+            ->values(':cid,:token,:iphash,:type,:created')
             ->bind(':cid', $cidParam, ParameterType::INTEGER)
             ->bind(':token', $clientToken, ParameterType::STRING)
+            ->bind(':iphash', $ipHash, ParameterType::STRING)
             ->bind(':type', $type, ParameterType::STRING)
             ->bind(':created', $now, ParameterType::STRING);
 
@@ -407,10 +423,55 @@ class PlgAjaxComments extends CMSPlugin
             id INT AUTO_INCREMENT PRIMARY KEY,
             comment_id INT NOT NULL,
             client_token VARCHAR(64) NOT NULL,
+            ip_hash VARCHAR(64) DEFAULT NULL,
             vote_type ENUM(\'like\', \'dislike\') NOT NULL,
             created DATETIME NOT NULL,
-            UNIQUE KEY uniq_vote (comment_id, client_token)
+            UNIQUE KEY uniq_vote_token (comment_id, client_token),
+            UNIQUE KEY uniq_vote_ip (comment_id, ip_hash)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;')->execute();
+
+        // Миграции для уже существующих таблиц
+        try {
+            $columns = $db->getTableColumns('#__constitution_comment_reaction_logs', true);
+            if (!isset($columns['ip_hash'])) {
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName('#__constitution_comment_reaction_logs') .
+                    ' ADD COLUMN ' . $db->quoteName('ip_hash') . ' VARCHAR(64) DEFAULT NULL'
+                )->execute();
+            }
+
+            // Добавляем уникальные индексы, если их нет.
+            $indexes = $db->getTableKeys('#__constitution_comment_reaction_logs');
+            $haveTokenIndex = false;
+            $haveIpIndex = false;
+            foreach ($indexes as $index) {
+                $name = strtolower((string) ($index->Key_name ?? ''));
+                if ($name === 'uniq_vote_token' || $name === 'uniq_vote') {
+                    $haveTokenIndex = true;
+                }
+                if ($name === 'uniq_vote_ip') {
+                    $haveIpIndex = true;
+                }
+            }
+
+            if (!$haveTokenIndex) {
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName('#__constitution_comment_reaction_logs') .
+                    ' ADD UNIQUE KEY ' . $db->quoteName('uniq_vote_token') . ' (' .
+                    $db->quoteName('comment_id') . ', ' . $db->quoteName('client_token') . ')'
+                )->execute();
+            }
+
+            if (!$haveIpIndex) {
+                $db->setQuery(
+                    'ALTER TABLE ' . $db->quoteName('#__constitution_comment_reaction_logs') .
+                    ' ADD UNIQUE KEY ' . $db->quoteName('uniq_vote_ip') . ' (' .
+                    $db->quoteName('comment_id') . ', ' . $db->quoteName('ip_hash') . ')'
+                )->execute();
+            }
+        } catch (\Throwable $e) {
+            // мягко игнорируем миграционные сбои
+        }
     }
 
     private function filterNullableInt($value): ?int
@@ -425,6 +486,24 @@ class PlgAjaxComments extends CMSPlugin
     }
 
     private function validateCaptcha($input): ?array
+    {
+        $mode = $this->getCaptchaMode();
+
+        if ($mode === 'recaptcha_invisible') {
+            return $this->validateInvisibleRecaptcha($input);
+        }
+
+        return $this->validatePluginCaptcha();
+    }
+
+    private function getCaptchaMode(): string
+    {
+        $mode = (string) $this->params->get('captcha_mode', 'joomla');
+
+        return $mode === 'recaptcha_invisible' ? 'recaptcha_invisible' : 'joomla';
+    }
+
+    private function validatePluginCaptcha(): ?array
     {
         $pluginName = $this->getCaptchaPlugin();
         if ($pluginName === '') {
@@ -460,6 +539,90 @@ class PlgAjaxComments extends CMSPlugin
         return null;
     }
 
+    private function validateInvisibleRecaptcha($input): ?array
+    {
+        $siteKey = trim((string) $this->params->get('recaptcha_site_key', ''));
+        $secretKey = trim((string) $this->params->get('recaptcha_secret_key', ''));
+
+        if ($siteKey === '' || $secretKey === '') {
+            return ['ok' => false, 'error' => 'captcha_not_configured'];
+        }
+
+        $token = trim((string) $input->get('g-recaptcha-response', '', 'raw'));
+
+        if ($token === '') {
+            return ['ok' => false, 'error' => 'captcha_failed'];
+        }
+
+        try {
+            $recaptcha = new ReCaptcha($secretKey);
+            $remoteIp = $this->getRemoteAddress();
+            $response = $recaptcha->verify($token, $remoteIp);
+
+            if (!$response->isSuccess()) {
+                return ['ok' => false, 'error' => 'captcha_failed'];
+            }
+        } catch (\Throwable $exception) {
+            return ['ok' => false, 'error' => 'captcha_failed'];
+        }
+
+        return null;
+    }
+
+    private function getRemoteAddress(): ?string
+    {
+        $app = Factory::getApplication();
+        $server = $app->input->server;
+
+        if (!$server) {
+            return null;
+        }
+
+        $address = trim((string) $server->getString('HTTP_X_FORWARDED_FOR', ''));
+
+        if ($address !== '') {
+            $parts = explode(',', $address);
+            $candidate = trim($parts[0]);
+
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        $remote = trim((string) $server->getString('REMOTE_ADDR', ''));
+
+        return $remote !== '' ? $remote : null;
+    }
+
+    private function hashIp(?string $ip): ?string
+    {
+        if ($ip === null || $ip === '') {
+            return null;
+        }
+
+        $secret = $this->getIpHashSecret();
+
+        if ($secret === '') {
+            return null;
+        }
+
+        return hash_hmac('sha256', $ip, $secret);
+    }
+
+    private function getIpHashSecret(): string
+    {
+        $secret = trim((string) $this->params->get('reaction_ip_secret', ''));
+
+        if ($secret !== '') {
+            return $secret;
+        }
+
+        $config = Factory::getConfig();
+        $configSecret = (string) $config->get('secret');
+
+        return $configSecret ?: 'comment-reactions-default-secret';
+    }
+
     private function loadCommentRow(DatabaseInterface $db, int $commentId): ?array
     {
         $query = $db->getQuery(true)
@@ -469,6 +632,27 @@ class PlgAjaxComments extends CMSPlugin
             ->bind(':cid', $commentId, ParameterType::INTEGER);
 
         $row = $db->setQuery($query)->loadAssoc();
+        return $row ?: null;
+    }
+
+    private function loadArticleRow(DatabaseInterface $db, int $articleId): ?array
+    {
+        if ($articleId <= 0) {
+            return null;
+        }
+
+        $query = $db->getQuery(true)
+            ->select([
+                $db->quoteName('id'),
+                $db->quoteName('title'),
+                $db->quoteName('catid'),
+            ])
+            ->from($db->quoteName('#__content'))
+            ->where($db->quoteName('id') . ' = :aid')
+            ->bind(':aid', $articleId, ParameterType::INTEGER);
+
+        $row = $db->setQuery($query)->loadAssoc();
+
         return $row ?: null;
     }
 
@@ -507,7 +691,7 @@ class PlgAjaxComments extends CMSPlugin
         return $db->setQuery($query)->loadAssocList('comment_id') ?: [];
     }
 
-    private function hasCommentVote(DatabaseInterface $db, int $commentId, string $clientToken): bool
+    private function hasCommentVote(DatabaseInterface $db, int $commentId, string $clientToken, ?string $ipHash): bool
     {
         $query = $db->getQuery(true)
             ->select('COUNT(*)')
@@ -517,7 +701,25 @@ class PlgAjaxComments extends CMSPlugin
             ->bind(':cid', $commentId, ParameterType::INTEGER)
             ->bind(':token', $clientToken, ParameterType::STRING);
         $count = (int) $db->setQuery($query)->loadResult();
-        return $count > 0;
+        if ($count > 0) {
+            return true;
+        }
+
+        if ($ipHash !== null && $ipHash !== '') {
+            $query = $db->getQuery(true)
+                ->select('COUNT(*)')
+                ->from($db->quoteName('#__constitution_comment_reaction_logs'))
+                ->where($db->quoteName('comment_id') . ' = :cid')
+                ->where($db->quoteName('ip_hash') . ' = :ip')
+                ->bind(':cid', $commentId, ParameterType::INTEGER)
+                ->bind(':ip', $ipHash, ParameterType::STRING);
+            $count = (int) $db->setQuery($query)->loadResult();
+            if ($count > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function handleModerationList($input, DatabaseInterface $db)
@@ -596,6 +798,8 @@ class PlgAjaxComments extends CMSPlugin
 
         $statusValue = $map[$statusCmd];
 
+        $rowBefore = $this->loadCommentRow($db, $commentId);
+
         $query = $db->getQuery(true)
             ->update($db->quoteName('#__constitution_comments'))
             ->set($db->quoteName('status') . ' = :status')
@@ -606,6 +810,12 @@ class PlgAjaxComments extends CMSPlugin
         $db->setQuery($query)->execute();
 
         $row = $this->loadCommentRow($db, $commentId);
+
+        if ($statusValue === self::STATUS_APPROVED && $row && $rowBefore && (int) $rowBefore['status'] !== self::STATUS_APPROVED) {
+            $parentRow = !empty($row['parent_id']) ? $this->loadCommentRow($db, (int) $row['parent_id']) : null;
+            $articleRow = $this->loadArticleRow($db, (int) $row['article_id']);
+            $this->notifyOnApproval($db, $row, $parentRow, $articleRow);
+        }
 
         if (!$row) {
             return $this->json(['ok' => false, 'error' => 'comment_not_found']);
@@ -666,6 +876,55 @@ class PlgAjaxComments extends CMSPlugin
                 ->where($db->quoteName('id') . ' = :cid')
                 ->bind(':cid', $commentId, ParameterType::INTEGER)
         )->execute();
+    }
+
+    private function notifyOnCreate(
+        DatabaseInterface $db,
+        array $commentRow,
+        ?array $parentRow,
+        ?array $articleRow,
+        bool $isApproved
+    ): void {
+        if (!$this->canUseNotifier()) {
+            return;
+        }
+
+        if (empty($commentRow['id'])) {
+            return;
+        }
+
+        try {
+            CommentNotificationService::onNewComment($db, $commentRow, $parentRow, $articleRow, $isApproved);
+        } catch (\Throwable $exception) {
+            // Silently ignore notification errors to avoid breaking UX.
+        }
+    }
+
+    private function notifyOnApproval(
+        DatabaseInterface $db,
+        array $commentRow,
+        ?array $parentRow,
+        ?array $articleRow
+    ): void {
+        if (!$this->canUseNotifier()) {
+            return;
+        }
+
+        if (empty($commentRow['id'])) {
+            return;
+        }
+
+        try {
+            $commentRow['status'] = self::STATUS_APPROVED;
+            CommentNotificationService::onCommentApproved($db, $commentRow);
+        } catch (\Throwable $exception) {
+            // Silently ignore notification errors to avoid breaking UX.
+        }
+    }
+
+    private function canUseNotifier(): bool
+    {
+        return class_exists(CommentNotificationService::class);
     }
 
     private function formatCommentRow(array $row, array $totals, ?array $userReaction, string $clientToken): array

@@ -1,0 +1,10 @@
+  .articles_list_block_top .nav_search input {
+    width: 100%;
+  }
+  .mobile_overlay_content .articles_list h3 {
+    display: none;
+  }
+  .article_block {
+    width: 100%;
+    padding: 0;
+

@@ -2,6 +2,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
@@ -85,46 +86,45 @@ $prepareRepeatable = static function ($value, array $default = []) {
 
 $itemsFallback = [
 	[
-		'question' => 'Як я магу ўдзельнічаць у абмеркаванні?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q1'),
 		'answer' => [
-			'Проста выдзеліце частку тэксту і націсніце на іконку каментарыя з “+”, каб пакінуць каментар або прапанову.',
+			Text::_('TPL_PRASTORA_FAQ_A1'),
 		],
 	],
 	[
-		'question' => 'Ці трэба рэгістравацца, каб пакінуць каментар?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q2'),
 		'answer' => [
-			'Не. Вы можаце ўдзельнічаць ананімна. Калі хочаце — можна пакінуць email для апавяшчэнняў, але гэта неабавязкова.',
+			Text::_('TPL_PRASTORA_FAQ_A2'),
 		],
 	],
 	[
-		'question' => 'Мой каментар не адлюстроўваецца — што рабіць?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q3'),
 		'answer' => [
-			'Калі каментар яшчэ не з’явіўся, магчыма, яго правярае мадэратар. Дайце нам крыху часу — і ён з’явіцца на старонцы.',
+			Text::_('TPL_PRASTORA_FAQ_A3'),
 		],
 	],
 	[
-		'question' => 'Ці магу я прапаноўваць свае тэмы або ідэі?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q4'),
 		'answer' => [
-			'Так, вы можаце пакінуць прапанову да любога раздзела, альбо напісаць нам, калі тэма патрабуе асобнай дыскусіі.',
+			Text::_('TPL_PRASTORA_FAQ_A4'),
 		],
 	],
 	[
-		'question' => 'Як вы забяспечваеце бяспеку ўдзельнікаў?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q5'),
 		'answer' => [
-			'Мы не патрабуем рэгістрацыі або персанальных дадзеных. Усе каментарыі мадэруюцца, каб прадухіліць пераслед і хейт-спіч.',
+			Text::_('TPL_PRASTORA_FAQ_A5'),
 		],
 	],
 	[
-		'question' => 'Я магу даведацца, што здарылася з маім каментаром?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q6'),
 		'answer' => [
-			'Так, калі вы пакінулі email, мы паведамім пра статус каментара. Без email вы можаце сачыць за адказамі на старонцы.',
+			Text::_('TPL_PRASTORA_FAQ_A6'),
 		],
 	],
 	[
-		'question' => 'Ці сапраўды мой каментар можа нешта змяніць?',
+		'question' => Text::_('TPL_PRASTORA_FAQ_Q7'),
 		'answer' => [
-			'Так, кожны каментар мае значэнне. Усе прапановы збіраюцца, аналізуюцца і перадаюцца экспертам, якія дапрацоўваюць дакументы.',
-			'Мы фіксуем падтрымкі, частату і аргументацыю. Найбольш важныя ідэі ўключаем у новыя версіі і перад толькі шырокай аўдыторыі.',
+			Text::_('TPL_PRASTORA_FAQ_A7'),
 		],
 	],
 ];
@@ -153,7 +153,7 @@ foreach ($itemsRaw as $entry) {
 	}
 	$faqItems[] = [
 		'question' => $question,
-		'answer' => $paragraphs ?: ['Адказ падрыхтоўваецца.'],
+		'answer' => $paragraphs ?: [Text::_('TPL_PRASTORA_FAQ_DEFAULT_ANSWER')],
 	];
 }
 
@@ -163,7 +163,7 @@ if (empty($faqItems)) {
 
 $footerText = $prepareString(
 	$getRaw($fieldMap, 'faq_footer_text'),
-	'Калі вы не знайшлі патрэбнай інфармацыі – напішыце нам. Мы заўсёды на сувязі і гатовыя дапамагчы.'
+	Text::_('TPL_PRASTORA_FAQ_FOOTER')
 );
 
 ?>

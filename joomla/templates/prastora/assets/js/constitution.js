@@ -1,4 +1,35 @@
 (function () {
+  const getTranslator = () => {
+    const joomla = window.Joomla;
+    if (joomla && joomla.JText && typeof joomla.JText._ === 'function') {
+      return joomla.JText._.bind(joomla.JText);
+    }
+    return null;
+  };
+
+  const translator = getTranslator();
+
+  const translate = (key, fallback = '') => {
+    if (translator) {
+      const value = translator(key);
+      if (value && value !== key) {
+        return value;
+      }
+    }
+    return fallback || key;
+  };
+
+  const translateFormat = (key, fallback = '', ...args) => {
+    let text = translate(key, fallback);
+    if (!args.length) {
+      return text;
+    }
+    args.forEach((arg) => {
+      text = text.replace('%s', arg);
+    });
+    return text;
+  };
+
   const scrollToId = (id) => {
     if (!id) {
       return;
@@ -11,6 +42,225 @@
 
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const MOBILE_OVERLAY_CLOSE_EVENT = 'prastora:mobileOverlayClose';
+
+  const MobileOverlay = (() => {
+    const storedPositions = new Map();
+    const mediaQuery = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 500px)')
+      : null;
+
+    let overlay = null;
+    let content = null;
+    let activeType = null;
+    let initialized = false;
+
+    const dispatchOverlayEvent = (name, detail) => {
+      if (typeof document === 'undefined' || !document) {
+        return;
+      }
+      let event;
+      try {
+        event = new CustomEvent(name, { detail });
+      } catch (error) {
+        event = document.createEvent('CustomEvent');
+        event.initCustomEvent(name, true, true, detail);
+      }
+      document.dispatchEvent(event);
+    };
+
+    const getBody = () => document.body || null;
+
+    const isMobile = () => {
+      if (mediaQuery) {
+        return mediaQuery.matches;
+      }
+      if (typeof window !== 'undefined' && typeof window.innerWidth === 'number') {
+        return window.innerWidth <= 500;
+      }
+      return false;
+    };
+
+    const rememberElement = (element) => {
+      if (!element || storedPositions.has(element)) {
+        return;
+      }
+      storedPositions.set(element, {
+        parent: element.parentNode,
+        nextSibling: element.nextSibling,
+      });
+    };
+
+    const restoreElement = (element) => {
+      const meta = storedPositions.get(element);
+      if (!meta || !meta.parent) {
+        return;
+      }
+      if (meta.nextSibling && meta.nextSibling.parentNode === meta.parent) {
+        meta.parent.insertBefore(element, meta.nextSibling);
+      } else {
+        meta.parent.appendChild(element);
+      }
+    };
+
+    const isOverlayOpen = () => overlay && overlay.classList.contains('is-open');
+
+    function close(reason = 'close') {
+      if (!overlay) {
+        return;
+      }
+      const previousType = activeType;
+      if (content && content.firstElementChild) {
+        const element = content.firstElementChild;
+        restoreElement(element);
+        content.innerHTML = '';
+      }
+      overlay.classList.remove('is-open');
+      overlay.setAttribute('hidden', 'hidden');
+      overlay.removeAttribute('data-overlay-type');
+      document.documentElement.classList.remove('mobile-overlay-open');
+      const body = getBody();
+      if (body) {
+        body.classList.remove('mobile-overlay-open');
+      }
+      activeType = null;
+      if (previousType) {
+        dispatchOverlayEvent(MOBILE_OVERLAY_CLOSE_EVENT, { type: previousType, reason });
+      }
+    }
+
+    const handleBackdropClick = (event) => {
+      if (event.target === overlay) {
+        close('backdrop');
+      }
+    };
+
+    const handleKeydown = (event) => {
+      if ((event.key === 'Escape' || event.key === 'Esc') && isOverlayOpen()) {
+        event.preventDefault();
+        close('escape');
+      }
+    };
+
+    const handleMediaChange = (event) => {
+      if (!event.matches) {
+        close('media-change');
+      }
+    };
+
+    const ensureElements = () => {
+      if (!overlay) {
+        overlay = document.querySelector('[data-role="mobile-overlay"]');
+        if (!overlay) {
+          return false;
+        }
+      }
+
+      if (!content) {
+        content = overlay.querySelector('[data-role="mobile-overlay-content"]');
+      }
+
+      if (!initialized) {
+        overlay.addEventListener('click', handleBackdropClick);
+        document.addEventListener('keydown', handleKeydown);
+
+        if (mediaQuery) {
+          if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleMediaChange);
+          } else if (typeof mediaQuery.addListener === 'function') {
+            mediaQuery.addListener(handleMediaChange);
+          }
+        }
+
+        initialized = true;
+      }
+
+      return !!content;
+    };
+
+    const prepareForType = (type, title, element) => {
+      if (!ensureElements() || !element) {
+        return false;
+      }
+
+      if (!isMobile()) {
+        return false;
+      }
+
+      const previousType = activeType;
+
+      if (content.firstElementChild && content.firstElementChild !== element) {
+        const current = content.firstElementChild;
+        restoreElement(current);
+        content.innerHTML = '';
+      }
+
+      if (previousType && previousType !== type) {
+        dispatchOverlayEvent(MOBILE_OVERLAY_CLOSE_EVENT, { type: previousType, reason: 'switch' });
+      }
+
+      if (activeType === type && isOverlayOpen()) {
+        return true;
+      }
+
+      rememberElement(element);
+      content.appendChild(element);
+      content.scrollTop = 0;
+      overlay.classList.add('is-open');
+      overlay.removeAttribute('hidden');
+      overlay.setAttribute('data-overlay-type', type);
+
+      document.documentElement.classList.add('mobile-overlay-open');
+      const body = getBody();
+      if (body) {
+        body.classList.add('mobile-overlay-open');
+      }
+
+      activeType = type;
+      return true;
+    };
+
+    const toggleType = (type, title, element) => {
+      if (activeType === type && isOverlayOpen()) {
+        close('toggle');
+        return false;
+      }
+      return prepareForType(type, title, element);
+    };
+
+    const ensureType = (type, title, element) => {
+      if (activeType === type && isOverlayOpen()) {
+        return true;
+      }
+      return prepareForType(type, title, element);
+    };
+
+    const isOpen = (type) => {
+      if (!isOverlayOpen()) {
+        return false;
+      }
+      return !type || activeType === type;
+    };
+
+    const query = (selector) => document.querySelector(selector);
+
+    const toggleContents = () => toggleType('contents', '', query('.articles_list_block'));
+    const toggleComments = () => toggleType('comments', '', query('.comments_block'));
+    const ensureContents = () => ensureType('contents', '', query('.articles_list_block'));
+    const ensureComments = () => ensureType('comments', '', query('.comments_block'));
+
+    return {
+      init: () => ensureElements(),
+      close,
+      toggleContents,
+      toggleComments,
+      ensureContents,
+      ensureComments,
+      isOpen,
+      isMobile,
+    };
+  })();
 
   const resolveAjaxEndpoint = () => {
     const joomla = window.Joomla && typeof window.Joomla.getOptions === 'function' ? window.Joomla : null;
@@ -306,6 +556,12 @@
         const commentsTrigger = event.target.closest('[data-role="open-comments"]');
         if (commentsTrigger) {
           event.preventDefault();
+          if (MobileOverlay && typeof MobileOverlay.ensureComments === 'function') {
+            const opened = MobileOverlay.ensureComments();
+            if (opened && CommentsModule && typeof CommentsModule.open === 'function') {
+              CommentsModule.open();
+            }
+          }
           if (sectionId && CommentsModule && typeof CommentsModule.showSection === 'function') {
             CommentsModule.showSection(sectionId, sectionTitle);
           }
@@ -315,6 +571,12 @@
         const commentTrigger = event.target.closest('[data-role="comment-open"]');
         if (commentTrigger) {
           event.preventDefault();
+          if (MobileOverlay && typeof MobileOverlay.ensureComments === 'function') {
+            const opened = MobileOverlay.ensureComments();
+            if (opened && CommentsModule && typeof CommentsModule.open === 'function') {
+              CommentsModule.open();
+            }
+          }
           if (sectionId && CommentsModule && typeof CommentsModule.startComment === 'function') {
             CommentsModule.startComment(sectionId, sectionTitle);
           }
@@ -358,6 +620,19 @@
       },
       moderationMode: 'premoderation',
       captchaEnabled: false,
+      captchaMode: 'none',
+      recaptcha: {
+        siteKey: '',
+        badge: '',
+        locale: '',
+        placeholder: null,
+        tokenInput: null,
+        wrapper: null,
+        widgetId: null,
+        scriptPromise: null,
+        pendingResolve: null,
+        pendingReject: null,
+      },
       list: null,
       listTitle: null,
       backButton: null,
@@ -383,6 +658,7 @@
       commentCountNodes: new Map(),
       activeSectionId: null,
       activeSectionTitle: '',
+      activeCommentId: null,
       currentContext: {
         parentId: null,
         sectionId: null,
@@ -392,6 +668,9 @@
       activeSelection: null,
       selectionBubble: null,
       selectionCheckHandle: null,
+      skipNextBubbleClick: false,
+      bubbleClickResetTimer: null,
+      overlayCloseListenerAttached: false,
     };
 
     const isPanelCollapsed = () => state.root && state.root.classList.contains('comments_block--collapsed');
@@ -436,9 +715,18 @@
     };
 
     const sanitizeHtmlText = (html) => {
-      const tmp = document.createElement('div');
-      tmp.innerHTML = html;
-      return tmp.textContent || tmp.innerText || '';
+      if (typeof html !== 'string' || html === '') {
+        return '';
+      }
+      // Use DOMParser to safely parse HTML without executing scripts
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        return doc.body.textContent || '';
+      } catch (e) {
+        // Fallback: strip tags manually
+        return html.replace(/<[^>]*>/g, '');
+      }
     };
 
     const truncateText = (text, maxLength) => {
@@ -557,6 +845,172 @@
       state.formNotice.hidden = false;
     };
 
+    const loadRecaptchaScript = () => {
+      if (!state.recaptcha.siteKey) {
+        return Promise.reject(new Error('recaptcha_unavailable'));
+      }
+
+      if (state.recaptcha.scriptPromise) {
+        return state.recaptcha.scriptPromise;
+      }
+
+      const loader = new Promise((resolve, reject) => {
+        if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+          resolve(window.grecaptcha);
+          return;
+        }
+
+        const existing = document.querySelector('script[data-role="recaptcha-api"]');
+        if (existing) {
+          existing.addEventListener('load', () => {
+            if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+              resolve(window.grecaptcha);
+            } else {
+              reject(new Error('recaptcha_unavailable'));
+            }
+          });
+          existing.addEventListener('error', () => reject(new Error('recaptcha_failed')));
+          return;
+        }
+
+        const script = document.createElement('script');
+        const localeParam = state.recaptcha.locale ? `&hl=${encodeURIComponent(state.recaptcha.locale)}` : '';
+        script.src = `https://www.google.com/recaptcha/api.js?render=explicit${localeParam}`;
+        script.async = true;
+        script.defer = true;
+        script.dataset.role = 'recaptcha-api';
+        script.onload = () => {
+          if (window.grecaptcha && typeof window.grecaptcha.render === 'function') {
+            resolve(window.grecaptcha);
+          } else {
+            reject(new Error('recaptcha_unavailable'));
+          }
+        };
+        script.onerror = () => reject(new Error('recaptcha_failed'));
+        document.head.appendChild(script);
+      });
+
+      state.recaptcha.scriptPromise = loader.then(
+        (value) => value,
+        (error) => {
+          state.recaptcha.scriptPromise = null;
+          throw error;
+        },
+      );
+
+      return state.recaptcha.scriptPromise;
+    };
+
+    const renderInvisibleRecaptcha = async () => {
+      if (!state.form || !state.recaptcha.siteKey) {
+        throw new Error('recaptcha_unavailable');
+      }
+
+      if (state.recaptcha.widgetId !== null && window.grecaptcha && typeof window.grecaptcha.getResponse === 'function') {
+        return state.recaptcha.widgetId;
+      }
+
+      const grecaptcha = await loadRecaptchaScript();
+
+      if (!state.recaptcha.placeholder) {
+        state.recaptcha.placeholder = state.form.querySelector('[data-role="recaptcha-placeholder"]');
+      }
+
+      if (!state.recaptcha.placeholder) {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'g-recaptcha';
+        placeholder.setAttribute('data-role', 'recaptcha-placeholder');
+        const wrapper = state.form.querySelector('[data-role="captcha-wrapper"]');
+        if (wrapper) {
+          wrapper.appendChild(placeholder);
+          state.recaptcha.wrapper = wrapper;
+        } else {
+          state.form.appendChild(placeholder);
+        }
+        state.recaptcha.placeholder = placeholder;
+      } else if (!state.recaptcha.wrapper) {
+        state.recaptcha.wrapper = state.recaptcha.placeholder.closest('[data-role="captcha-wrapper"]');
+      }
+
+      if (state.recaptcha.wrapper) {
+        state.recaptcha.wrapper.removeAttribute('hidden');
+        state.recaptcha.wrapper.style.display = 'block';
+      }
+
+      state.recaptcha.tokenInput = state.form.querySelector('[data-role="recaptcha-response"]');
+
+      state.recaptcha.widgetId = grecaptcha.render(state.recaptcha.placeholder, {
+        sitekey: state.recaptcha.siteKey,
+        size: 'invisible',
+        badge: state.recaptcha.badge || 'bottomright',
+        callback: (token) => {
+          if (state.recaptcha.tokenInput) {
+            state.recaptcha.tokenInput.value = token || '';
+          }
+          if (typeof state.recaptcha.pendingResolve === 'function') {
+            state.recaptcha.pendingResolve(token || '');
+          }
+          state.recaptcha.pendingResolve = null;
+          state.recaptcha.pendingReject = null;
+        },
+        'expired-callback': () => {
+          if (state.recaptcha.tokenInput) {
+            state.recaptcha.tokenInput.value = '';
+          }
+          if (typeof state.recaptcha.pendingReject === 'function') {
+            state.recaptcha.pendingReject(new Error('captcha_expired'));
+          }
+          state.recaptcha.pendingResolve = null;
+          state.recaptcha.pendingReject = null;
+        },
+        'error-callback': () => {
+          if (typeof state.recaptcha.pendingReject === 'function') {
+            state.recaptcha.pendingReject(new Error('captcha_error'));
+          } else {
+            showFormError(translate('TPL_PRASTORA_JS_ERROR_CAPTCHA', 'Captcha verification failed.'));
+          }
+          state.recaptcha.pendingResolve = null;
+          state.recaptcha.pendingReject = null;
+        },
+      });
+
+      return state.recaptcha.widgetId;
+    };
+
+    const ensureRecaptchaToken = async () => {
+      await renderInvisibleRecaptcha();
+
+      if (!window.grecaptcha || state.recaptcha.widgetId === null) {
+        throw new Error('recaptcha_unavailable');
+      }
+
+      return new Promise((resolve, reject) => {
+        state.recaptcha.pendingResolve = resolve;
+        state.recaptcha.pendingReject = reject;
+
+        try {
+          window.grecaptcha.execute(state.recaptcha.widgetId);
+        } catch (error) {
+          state.recaptcha.pendingResolve = null;
+          state.recaptcha.pendingReject = null;
+          reject(error);
+        }
+      });
+    };
+
+    const resetRecaptcha = () => {
+      if (window.grecaptcha && state.recaptcha.widgetId !== null) {
+        try {
+          window.grecaptcha.reset(state.recaptcha.widgetId);
+        } catch (error) {
+          // ignore
+        }
+      }
+      if (state.recaptcha.tokenInput) {
+        state.recaptcha.tokenInput.value = '';
+      }
+    };
+
     const clearReplyContext = () => {
       state.currentContext.parentId = null;
       state.currentContext.sectionId = null;
@@ -566,7 +1020,7 @@
         state.replyContext.style.display = 'none';
       }
       if (state.replyLabel) {
-        state.replyLabel.textContent = 'Вы адказваеце на каментар.';
+        state.replyLabel.textContent = translate('TPL_PRASTORA_JS_REPLY_LABEL');
       }
     };
 
@@ -617,6 +1071,22 @@
       state.highlights.clear();
     };
 
+    const clearActiveHighlights = () => {
+      state.highlights.forEach((nodes) => {
+        nodes.forEach((node) => {
+          if (node && typeof node.removeAttribute === 'function') {
+            node.removeAttribute('data-active');
+            node.removeAttribute('data-hover');
+            if (node.dataset) {
+              delete node.dataset.active;
+              delete node.dataset.hover;
+            }
+          }
+        });
+      });
+      state.activeCommentId = null;
+    };
+
     const ensureSelectionBubble = () => {
       if (state.selectionBubble) {
         return state.selectionBubble;
@@ -628,13 +1098,69 @@
       bubble.style.opacity = '0';
       bubble.style.top = '-1000px';
       bubble.style.left = '-1000px';
-      bubble.setAttribute('aria-label', 'Дадаць каментар да вылучэння');
-      bubble.textContent = '+';
+      bubble.setAttribute('aria-label', translate('TPL_PRASTORA_JS_SELECTION_HINT'));
+      bubble.setAttribute('data-role', 'comment-selection-trigger');
+
+      const activateFromBubble = (event) => {
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        startCommentFromSelection();
+      };
+
+      const resetBubbleClickSkip = (delay = 400) => {
+        if (state.bubbleClickResetTimer) {
+          clearTimeout(state.bubbleClickResetTimer);
+          state.bubbleClickResetTimer = null;
+        }
+        state.bubbleClickResetTimer = setTimeout(() => {
+          state.skipNextBubbleClick = false;
+          if (state.bubbleClickResetTimer) {
+            clearTimeout(state.bubbleClickResetTimer);
+            state.bubbleClickResetTimer = null;
+          }
+        }, delay);
+      };
+
+      const handleImmediateBubbleActivation = (event) => {
+        state.skipNextBubbleClick = true;
+        activateFromBubble(event);
+        resetBubbleClickSkip(600);
+      };
 
       bubble.addEventListener('click', (event) => {
-        event.preventDefault();
-        startCommentFromSelection();
+        if (state.skipNextBubbleClick) {
+          state.skipNextBubbleClick = false;
+          if (state.bubbleClickResetTimer) {
+            clearTimeout(state.bubbleClickResetTimer);
+            state.bubbleClickResetTimer = null;
+          }
+          return;
+        }
+        activateFromBubble(event);
       });
+
+      if (typeof window !== 'undefined' && 'PointerEvent' in window) {
+        bubble.addEventListener(
+          'pointerdown',
+          (event) => {
+            if (event.pointerType !== 'touch') {
+              return;
+            }
+            handleImmediateBubbleActivation(event);
+          },
+          { passive: false }
+        );
+      } else {
+        bubble.addEventListener(
+          'touchstart',
+          (event) => {
+            handleImmediateBubbleActivation(event);
+          },
+          { passive: false }
+        );
+      }
 
       document.body.appendChild(bubble);
       state.selectionBubble = bubble;
@@ -661,7 +1187,7 @@
       const rect = rects[rects.length - 1];
       const bubbleRect = bubble.getBoundingClientRect();
       const bubbleHeight = bubbleRect.height || 40;
-      const top = rect.top + rect.height / 2 - bubbleHeight / 2;
+      const top = rect.top + rect.height / 2 - bubbleHeight / 2 - 16;
       const left = rect.right + 12;
       bubble.style.top = `${Math.round(top)}px`;
       bubble.style.left = `${Math.round(left)}px`;
@@ -705,6 +1231,9 @@
         hideSelectionBubble();
         return;
       }
+      if (MobileOverlay && typeof MobileOverlay.ensureComments === 'function') {
+        MobileOverlay.ensureComments();
+      }
       hideSelectionBubble();
       clearPreviewHighlight();
       const highlightRange = range.cloneRange();
@@ -726,7 +1255,7 @@
         clearFormNotice();
         const title = state.activeSectionTitle || getSectionTitle(sectionId) || '';
         if (title) {
-          showFormNotice(`Вы каментуеце: ${title}`);
+          showFormNotice(translateFormat('TPL_PRASTORA_JS_COMMENT_CONTEXT', `You are commenting: ${title}`, title));
         }
       }
       const selection = window.getSelection && window.getSelection();
@@ -851,16 +1380,32 @@
       flat.forEach((comment) => applyHighlightForComment(comment));
     };
 
-    const highlightComment = (commentId, active) => {
+    const highlightComment = (commentId, active, mode = 'active') => {
       const nodes = state.highlights.get(commentId);
       if (!nodes) {
         return;
       }
+      const attr = mode === 'hover' ? 'hover' : 'active';
       nodes.forEach((node) => {
+        if (!node) {
+          return;
+        }
         if (active) {
-          node.dataset.active = '1';
-        } else {
+          if (node.dataset) {
+            node.dataset[attr] = '1';
+          } else {
+            node.setAttribute(`data-${attr}`, '1');
+          }
+        } else if (attr === 'active') {
           node.removeAttribute('data-active');
+          if (node.dataset) {
+            delete node.dataset.active;
+          }
+        } else {
+          node.removeAttribute('data-hover');
+          if (node.dataset) {
+            delete node.dataset.hover;
+          }
         }
       });
     };
@@ -877,24 +1422,43 @@
       });
       element.classList.add('comment_item_active');
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      clearActiveHighlights();
+      state.activeCommentId = commentId;
       highlightComment(commentId, true);
       if (opts.scrollArticle) {
         const nodes = state.highlights.get(commentId);
-        if (nodes && nodes.length) {
-          nodes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else if (state.commentsById.has(commentId)) {
-          const comment = state.commentsById.get(commentId);
-          if (comment && comment.section_id) {
-            const section = document.querySelector(`.article_block_item[data-section-id="${comment.section_id}"]`);
-            if (section) {
-              section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const hasHighlight = !!(nodes && nodes.length);
+        const scrollArticleToContext = () => {
+          if (hasHighlight) {
+            nodes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          if (state.commentsById.has(commentId)) {
+            const comment = state.commentsById.get(commentId);
+            if (comment && comment.section_id) {
+              const section = document.querySelector(`.article_block_item[data-section-id="${comment.section_id}"]`);
+              if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
             }
           }
+        };
+
+        const shouldCloseOverlay = hasHighlight
+          && MobileOverlay
+          && typeof MobileOverlay.isOpen === 'function'
+          && typeof MobileOverlay.close === 'function'
+          && MobileOverlay.isOpen('comments');
+
+        if (shouldCloseOverlay) {
+          MobileOverlay.close();
+          requestAnimationFrame(() => {
+            requestAnimationFrame(scrollArticleToContext);
+          });
+        } else {
+          scrollArticleToContext();
         }
       }
-      setTimeout(() => {
-        highlightComment(commentId, false);
-      }, 1500);
     };
 
     const handleHighlightInteraction = (event) => {
@@ -902,6 +1466,9 @@
       if (highlight) {
         const commentId = parseInt(highlight.dataset.commentId || '', 10);
         if (commentId) {
+          if (MobileOverlay && typeof MobileOverlay.ensureComments === 'function') {
+            MobileOverlay.ensureComments();
+          }
           focusComment(commentId, { scrollArticle: false });
         }
         return;
@@ -910,6 +1477,9 @@
       const trigger = event.target.closest('.comment-selection-bubble');
       if (trigger) {
         event.preventDefault();
+        if (MobileOverlay && typeof MobileOverlay.ensureComments === 'function') {
+          MobileOverlay.ensureComments();
+        }
         startCommentFromSelection();
       }
     };
@@ -921,7 +1491,9 @@
       state.currentContext.parentId = comment.id;
       if (state.replyLabel) {
         const plain = sanitizeHtmlText(comment.body_html || comment.body || '');
-        state.replyLabel.textContent = `Вы адказваеце: ${truncateText(plain, 120)}`;
+        const truncated = truncateText(plain, 120);
+        const fallback = `You are replying: ${truncated}`;
+        state.replyLabel.textContent = translateFormat('TPL_PRASTORA_JS_REPLY_CONTEXT', fallback, truncated);
       }
       if (state.replyContext) {
         state.replyContext.hidden = false;
@@ -964,13 +1536,18 @@
       header.className = 'comment_item_header';
       const name = document.createElement('span');
       name.className = 'comment_item_header_name';
-      name.textContent = comment.author_name || 'Ананімны Карыстальнік';
+      name.textContent = comment.author_name || translate('TPL_PRASTORA_JS_AUTHOR_ANONYMOUS', 'Anonymous User');
       header.appendChild(name);
       item.appendChild(header);
 
       const body = document.createElement('div');
       body.className = 'comment_item_content';
-      body.innerHTML = comment.body_html || comment.body || '';
+      // body_html is server-side escaped; fallback to textContent for safety
+      if (comment.body_html) {
+        body.innerHTML = comment.body_html;
+      } else {
+        body.textContent = comment.body || '';
+      }
       item.appendChild(body);
 
       const actions = document.createElement('div');
@@ -1015,7 +1592,7 @@
         reply.appendChild(replyIcon);
       }
       const replyText = document.createElement('p');
-      replyText.textContent = 'Адказаць';
+      replyText.textContent = translate('TPL_PRASTORA_JS_ACTION_REPLY', 'Reply');
       reply.appendChild(replyText);
       actions.appendChild(reply);
 
@@ -1023,8 +1600,14 @@
 
       state.commentElements.set(comment.id, item);
 
-      item.addEventListener('mouseenter', () => highlightComment(comment.id, true));
-      item.addEventListener('mouseleave', () => highlightComment(comment.id, false));
+      item.addEventListener('mouseenter', () => {
+        if (state.activeCommentId !== comment.id) {
+          highlightComment(comment.id, true, 'hover');
+        }
+      });
+      item.addEventListener('mouseleave', () => {
+        highlightComment(comment.id, false, 'hover');
+      });
 
       if (Array.isArray(comment.replies) && comment.replies.length) {
         const childrenContainer = document.createElement('div');
@@ -1061,6 +1644,9 @@
         }
       });
       applyHighlightsForComments(comments);
+      if (state.activeCommentId) {
+        highlightComment(state.activeCommentId, true);
+      }
       if (state.pendingScrollId) {
         focusComment(state.pendingScrollId, { scrollArticle: true });
         state.pendingScrollId = null;
@@ -1111,10 +1697,10 @@
     };
 
     const updateListHeader = (totalCount) => {
-      let baseText = 'Усе Каментары';
+      let baseText = translate('TPL_PRASTORA_JS_COMMENTS_ALL', 'All comments');
 
       if (state.activeSectionId) {
-        baseText = 'Каментары';
+        baseText = translate('TPL_PRASTORA_JS_COMMENTS_FILTERED', 'Comments');
       }
 
       if (state.listTitle) {
@@ -1196,7 +1782,7 @@
       const title = state.activeSectionTitle || sectionTitle || getSectionTitle(sectionId);
       clearFormNotice();
       if (title) {
-        showFormNotice(`Вы каментуеце: ${title}`);
+        showFormNotice(translateFormat('TPL_PRASTORA_JS_COMMENT_CONTEXT', `You are commenting: ${title}`, title));
       }
 
       if (state.root) {
@@ -1349,24 +1935,20 @@
     };
 
     const buildErrorMessage = (code) => {
-      switch (code) {
-        case 'missing_token':
-          return 'Не атрымалася вызначыць карыстальніка. Абнавіце старонку.';
-        case 'bad_email':
-          return 'Калі ласка, праверце email.';
-        case 'empty_body':
-          return 'Дадайце тэкст каментару.';
-        case 'bad_anchor':
-          return 'Не атрымалася зафіксаваць вылучэнне. Паспрабуйце яшчэ раз.';
-        case 'parent_not_found':
-          return 'Першапачатковы каментар ужо недаступны.';
-        case 'captcha_not_configured':
-          return 'Капча часова недаступная. Паспрабуйце пазней.';
-        case 'captcha_failed':
-          return 'Капча ўведзена няправільна.';
-        default:
-          return 'Памылка пры адпраўцы каментару. Паспрабуйце пазней.';
+      const keyMap = {
+        missing_token: { key: 'TPL_PRASTORA_JS_ERROR_USER', fallback: 'Unable to identify the user. Please refresh the page.' },
+        bad_email: { key: 'TPL_PRASTORA_JS_ERROR_EMAIL', fallback: 'Please double-check the email.' },
+        empty_body: { key: 'TPL_PRASTORA_JS_ERROR_EMPTY', fallback: 'Add some text to your comment.' },
+        bad_anchor: { key: 'TPL_PRASTORA_JS_ERROR_SELECTION', fallback: 'Could not capture the selection. Try again.' },
+        parent_not_found: { key: 'TPL_PRASTORA_JS_ERROR_PARENT', fallback: 'The original comment is no longer available.' },
+        captcha_not_configured: { key: 'TPL_PRASTORA_JS_ERROR_CAPTCHA_OFF', fallback: 'Captcha is temporarily unavailable. Try later.' },
+        captcha_failed: { key: 'TPL_PRASTORA_JS_ERROR_CAPTCHA', fallback: 'Captcha verification failed.' },
+      };
+      const entry = keyMap[code];
+      if (entry) {
+        return translate(entry.key, entry.fallback);
       }
+      return translate('TPL_PRASTORA_JS_ERROR_GENERIC', 'Something went wrong while sending the comment. Try later.');
     };
 
     const resetForm = (options = {}) => {
@@ -1376,9 +1958,38 @@
       }
       clearReplyContext();
       clearSelectionContext();
+      if (state.captchaEnabled && state.captchaMode === 'recaptcha_invisible') {
+        resetRecaptcha();
+      }
       if (!preserveNotice) {
         clearFormNotice();
       }
+    };
+
+    const resetCommentPanelState = () => {
+      clearActiveHighlights();
+      state.commentElements.forEach((node) => {
+        if (node) {
+          node.classList.remove('comment_item_active');
+        }
+      });
+      resetForm();
+      clearFormError();
+      state.currentContext.parentId = null;
+      state.currentContext.sectionId = null;
+      state.currentContext.anchor = null;
+      state.activeSectionId = null;
+      state.activeSectionTitle = '';
+      state.pendingScrollId = null;
+      updateCommentView({ scrollList: false, smooth: false });
+    };
+
+    const handleMobileOverlayClose = (event) => {
+      if (!event || !event.detail || event.detail.type !== 'comments') {
+        return;
+      }
+      resetCommentPanelState();
+      collapsePanel();
     };
 
     const handleFormSubmit = async (event) => {
@@ -1389,7 +2000,7 @@
       const formData = new FormData(state.form);
       const body = (formData.get('body') || '').toString().trim();
       if (!body) {
-        showFormError('Дадайце тэкст каментару.');
+        showFormError(translate('TPL_PRASTORA_JS_ERROR_EMPTY', 'Add some text to your comment.'));
         return;
       }
       clearFormError();
@@ -1438,6 +2049,24 @@
       if (state.tokenKey) {
         params.set(state.tokenKey, '1');
       }
+      if (state.captchaEnabled) {
+        try {
+          if (state.captchaMode === 'recaptcha_invisible') {
+            await ensureRecaptchaToken();
+          }
+          const captchaValueSource = state.recaptcha.tokenInput
+            || state.form.querySelector('textarea[name="g-recaptcha-response"], input[name="g-recaptcha-response"]');
+          const captchaValue = captchaValueSource ? (captchaValueSource.value || '').toString().trim() : (formData.get('g-recaptcha-response') || '').toString().trim();
+          if (captchaValue) {
+            params.set('g-recaptcha-response', captchaValue);
+          }
+        } catch (captchaError) {
+          console.error('Failed to resolve captcha', captchaError);
+          state.pendingRequest = false;
+          showFormError(translate('TPL_PRASTORA_JS_ERROR_CAPTCHA', 'Captcha verification failed.'));
+          return;
+        }
+      }
       try {
         const response = await fetch(state.endpoint, {
           method: 'POST',
@@ -1458,7 +2087,7 @@
         }
         if (payload.pending) {
           resetForm({ preserveNotice: true });
-          showFormNotice('Ваш каментар будзе апублікаваны пасля модэрацыі.');
+          showFormNotice(translate('TPL_PRASTORA_JS_PENDING_NOTICE', 'Your comment will be published after moderation.'));
           return;
         }
         const comment = payload.comment;
@@ -1469,9 +2098,12 @@
         await loadComments();
       } catch (error) {
         console.error('Failed to submit comment', error);
-        showFormError('Памылка пры адпраўцы каментару. Паспрабуйце пазней.');
+        showFormError(translate('TPL_PRASTORA_JS_ERROR_GENERIC', 'Something went wrong while sending the comment. Try later.'));
       } finally {
         state.pendingRequest = false;
+        if (state.captchaEnabled && state.captchaMode === 'recaptcha_invisible') {
+          resetRecaptcha();
+        }
       }
     };
 
@@ -1643,6 +2275,10 @@
       state.icons.reply = root.dataset.replyIcon || '';
       state.moderationMode = root.dataset.moderationMode || 'premoderation';
       state.captchaEnabled = root.dataset.captchaEnabled === '1';
+      state.captchaMode = root.dataset.captchaMode || 'none';
+      state.recaptcha.siteKey = root.dataset.recaptchaSitekey || '';
+      state.recaptcha.badge = root.dataset.recaptchaBadge || '';
+      state.recaptcha.locale = root.dataset.recaptchaLocale || '';
       state.list = root.querySelector('[data-role="comments-list"]');
       state.listTitle = root.querySelector('[data-role="list-title"]');
       state.backButton = root.querySelector('[data-role="back-to-all"]');
@@ -1657,6 +2293,20 @@
       state.selectionText = state.selectionPreview ? state.selectionPreview.querySelector('[data-role="selection-text"]') : null;
       state.selectionClear = state.selectionPreview ? state.selectionPreview.querySelector('[data-role="selection-clear"]') : null;
       state.textarea = state.form ? state.form.querySelector('textarea[name="body"]') : null;
+      state.recaptcha.placeholder = state.form ? state.form.querySelector('[data-role="recaptcha-placeholder"]') : null;
+      state.recaptcha.tokenInput = state.form ? state.form.querySelector('[data-role="recaptcha-response"]') : null;
+      state.recaptcha.wrapper = state.form ? state.form.querySelector('.comment_form_captcha--invisible[data-role="captcha-wrapper"]') : null;
+      state.recaptcha.widgetId = null;
+      state.recaptcha.scriptPromise = null;
+      state.recaptcha.pendingResolve = null;
+      state.recaptcha.pendingReject = null;
+
+      // Preload and render invisible reCAPTCHA once, so the first submit doesn’t fail while the script is still loading.
+      if (state.captchaEnabled && state.captchaMode === 'recaptcha_invisible') {
+        renderInvisibleRecaptcha().catch(() => {
+          // Ignore preload failures; the submit handler will retry and surface errors.
+        });
+      }
 
       if (state.replyContext) {
         state.replyContext.hidden = true;
@@ -1677,6 +2327,29 @@
         state.backButton.addEventListener('click', (event) => {
           event.preventDefault();
           clearSectionFilter();
+        });
+      }
+
+      let titleIconWasCollapsed = false;
+      const titleIcon = root.querySelector('.comment_list_title_icon');
+      if (titleIcon) {
+        titleIcon.addEventListener('pointerdown', () => {
+          titleIconWasCollapsed = isPanelCollapsed();
+        });
+        titleIcon.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (titleIconWasCollapsed) {
+            titleIconWasCollapsed = false;
+            openPanel();
+            return;
+          }
+          titleIconWasCollapsed = false;
+          if (isPanelCollapsed()) {
+            return;
+          }
+          resetCommentPanelState();
+          collapsePanel();
         });
       }
 
@@ -1733,6 +2406,10 @@
         state.list.addEventListener('click', handleListClick);
       }
       document.addEventListener('click', handleHighlightInteraction);
+      if (!state.overlayCloseListenerAttached) {
+        document.addEventListener(MOBILE_OVERLAY_CLOSE_EVENT, handleMobileOverlayClose);
+        state.overlayCloseListenerAttached = true;
+      }
       initForm();
       initSelectionTracking();
       ensureSelectionBubble();
@@ -1750,17 +2427,119 @@
   })();
 
   document.addEventListener('DOMContentLoaded', () => {
+    const normalizeSearchString = (value) => {
+      if (!value) {
+        return '';
+      }
+      let text = value.toString();
+      if (typeof text.normalize === 'function') {
+        text = text.normalize('NFKC');
+      }
+      text = text.trim().replace(/\s+/g, ' ');
+      try {
+        return text.toLocaleLowerCase('be-BY');
+      } catch (error) {
+        return text.toLowerCase();
+      }
+    };
+
+    const initContentsSearch = () => {
+      const searchInput = document.getElementById('tocSearch');
+      if (!searchInput) {
+        return;
+      }
+
+      const entries = Array.from(document.querySelectorAll('.articles_list_item')).map((item) => {
+        const desc = item.querySelector('.articles_list_item_desc');
+        const paragraphs = desc ? Array.from(desc.querySelectorAll('p')) : [];
+        return {
+          item,
+          desc,
+          paragraphs,
+        };
+      });
+
+      if (!entries.length) {
+        return;
+      }
+
+      const clearFilter = () => {
+        entries.forEach(({ item, desc, paragraphs }) => {
+          item.style.display = '';
+          delete item.dataset.searchMatch;
+          if (desc) {
+            desc.style.display = '';
+          }
+          paragraphs.forEach((paragraph) => {
+            paragraph.style.display = '';
+          });
+        });
+      };
+
+      const applyFilter = (query) => {
+        entries.forEach(({ item, desc, paragraphs }) => {
+          let matches = 0;
+          paragraphs.forEach((paragraph) => {
+            const text = normalizeSearchString(paragraph.textContent || '');
+            if (text.includes(query)) {
+              paragraph.style.display = '';
+              matches += 1;
+            } else {
+              paragraph.style.display = 'none';
+            }
+          });
+
+          if (matches > 0) {
+            item.style.display = '';
+            item.dataset.searchMatch = '1';
+            if (desc) {
+              desc.style.display = 'block';
+            }
+          } else {
+            item.style.display = 'none';
+            delete item.dataset.searchMatch;
+            if (desc) {
+              desc.style.display = '';
+            }
+          }
+        });
+      };
+
+      const handleInput = (event) => {
+        const rawValue = event && event.target ? event.target.value : searchInput.value;
+        const normalizedValue = normalizeSearchString(rawValue);
+        if (!normalizedValue) {
+          clearFilter();
+          return;
+        }
+        applyFilter(normalizedValue);
+      };
+
+      searchInput.addEventListener('input', handleInput);
+      searchInput.addEventListener('search', handleInput);
+
+      if (searchInput.value) {
+        handleInput({ target: searchInput });
+      }
+    };
+
     document.querySelectorAll('.articles_list_item').forEach((item) => {
       const sectionId = item.dataset.sectionId || '';
       const titleTrigger = item.querySelector('.articles_list_item_title');
 
-      if (titleTrigger && titleTrigger.dataset.target) {
+      if (titleTrigger) {
         titleTrigger.addEventListener('click', (event) => {
           event.preventDefault();
-          item.classList.toggle('articles_list_item_active');
-          scrollToId(titleTrigger.dataset.target);
+          const targetId = titleTrigger.dataset.target || '';
+          const isMobileView = MobileOverlay && typeof MobileOverlay.isMobile === 'function' && MobileOverlay.isMobile();
+          const overlayOpen = isMobileView && MobileOverlay && typeof MobileOverlay.isOpen === 'function' && MobileOverlay.isOpen('contents');
 
-          if (sectionId) {
+          item.classList.toggle('articles_list_item_active');
+
+          if (!overlayOpen && targetId) {
+            scrollToId(targetId);
+            history.replaceState(null, '', `#${targetId}`);
+          } else if (sectionId) {
             history.replaceState(null, '', `#${sectionId}`);
           }
         });
@@ -1776,11 +2555,44 @@
           }
 
           item.classList.add('articles_list_item_active');
-          scrollToId(targetId);
-          history.replaceState(null, '', `#${targetId}`);
+
+          const performScroll = () => {
+            scrollToId(targetId);
+            history.replaceState(null, '', `#${targetId}`);
+          };
+
+          if (MobileOverlay && typeof MobileOverlay.isOpen === 'function' && typeof MobileOverlay.close === 'function' && MobileOverlay.isOpen('contents')) {
+            MobileOverlay.close();
+            requestAnimationFrame(performScroll);
+          } else {
+            performScroll();
+          }
         });
       });
     });
+
+    initContentsSearch();
+
+    MobileOverlay.init();
+
+    const contentsToggle = document.querySelector('[data-role="toggle-contents"]');
+    if (contentsToggle) {
+      contentsToggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        MobileOverlay.toggleContents();
+      });
+    }
+
+    const commentsToggle = document.querySelector('[data-role="toggle-comments"]');
+    if (commentsToggle) {
+      commentsToggle.addEventListener('click', (event) => {
+        event.preventDefault();
+        const opened = MobileOverlay.toggleComments();
+        if (opened && CommentsModule && typeof CommentsModule.open === 'function') {
+          CommentsModule.open();
+        }
+      });
+    }
 
     const initialHash = window.location.hash ? window.location.hash.substring(1) : '';
 

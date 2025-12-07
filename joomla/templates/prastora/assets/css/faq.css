@@ -66,11 +66,14 @@
 }
 
 .faq_item_desciprition {
-  display: none;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: height 0.25s ease, opacity 0.2s ease;
 }
 
-.faq_item_active .faq_item_desciprition {
-  display: block;
+.faq_item_desciprition[data-expanded='true'] {
+  opacity: 1;
 }
 
 .faq_item_icon img {
@@ -132,5 +135,8 @@
   .faq_item_title p {
     text-align: left;
     width: 100%;
+  }
+  .faq_item_icon {
+    margin-top: 10px;
   }
 }

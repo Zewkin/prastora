@@ -4,12 +4,25 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
+use Joomla\Database\ParameterType;
+
+require_once __DIR__ . '/helpers/language.php';
 
 $app = Factory::getApplication();
+$language = $app->getLanguage();
+$language->load('tpl_prastora', JPATH_SITE, null, true, true);
+prastoraRegisterScriptTranslations();
 $doc = $app->getDocument();
 $tplUri = rtrim(Uri::root(true), '/') . '/templates/' . $this->template;
+$langTag = strtolower((string) $language->getTag());
+$logoSrc = $tplUri . '/assets/' . ((strpos($langTag, 'en') === 0) ? 'logo-en.svg' : 'logo.svg');
 $tplPath = __DIR__;
+$baseHref = rtrim(Uri::root(true), '/') . '/';
+$newsPath = (strpos($langTag, 'ru') === 0) ? '/news-ru' : '/news';
+$aboutPath = '/about-us';
+$faqPath = '/faq';
 
 // Базовые ассеты подключаем всегда
 $mainCssOptions = [];
@@ -39,11 +52,33 @@ $assetMap = [
 		'css' => ['about-us.css', 'constitution.css'],
 		'js'  => ['constitution.js'],
 	],
+	'constitution-en' => [
+		'css' => ['about-us.css', 'constitution.css'],
+		'js'  => ['constitution.js'],
+	],
+	'constitution-ru' => [
+		'css' => ['about-us.css', 'constitution.css'],
+		'js'  => ['constitution.js'],
+	],
 	'faq' => [
 		'css' => ['faq.css'],
 		'js'  => ['faq.js'],
 	],
+	'faq-en' => [
+		'css' => ['faq.css'],
+		'js'  => ['faq.js'],
+	],
+	'faq-ru' => [
+		'css' => ['faq.css'],
+		'js'  => ['faq.js'],
+	],
 	'about-us' => [
+		'css' => ['about-us.css'],
+	],
+	'about-us-en' => [
+		'css' => ['about-us.css'],
+	],
+	'about-us-ru' => [
 		'css' => ['about-us.css'],
 	],
 	'privacy-policy' => [],
@@ -59,6 +94,61 @@ if ($active && !empty($active->alias)) {
 
 if ($option === 'com_content' && $view === 'article' && $layout === 'constitution') {
 	$pageKeys[] = 'constitution';
+}
+
+if ($option === 'com_content' && $view === 'article') {
+	$articleIdInput = $app->input->getString('id', '');
+	$articleId = (int) $app->input->getInt('id');
+	if ($articleId <= 0 && $articleIdInput !== '') {
+		[$articleIdPart] = explode(':', $articleIdInput, 2);
+		$articleId = (int) $articleIdPart;
+	}
+
+	if ($articleId > 0) {
+		try {
+			$db = Factory::getDbo();
+			$query = $db->getQuery(true)
+				->select([
+					$db->quoteName('a.alias', 'article_alias'),
+					$db->quoteName('a.catid'),
+					$db->quoteName('c.alias', 'category_alias'),
+					$db->quoteName('c.title', 'category_title'),
+				])
+				->from($db->quoteName('#__content', 'a'))
+				->join('LEFT', $db->quoteName('#__categories', 'c') . ' ON ' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.catid'))
+				->where($db->quoteName('a.id') . ' = :articleId')
+				->bind(':articleId', $articleId, ParameterType::INTEGER)
+				->setLimit(1);
+			$db->setQuery($query);
+			$articleMeta = $db->loadObject();
+			if ($articleMeta) {
+				$articleAlias = strtolower((string) ($articleMeta->article_alias ?? ''));
+				$categoryAlias = strtolower((string) ($articleMeta->category_alias ?? ''));
+				$categoryTitle = (string) ($articleMeta->category_title ?? '');
+				$categoryId = (int) ($articleMeta->catid ?? 0);
+
+				if (
+					$articleAlias === 'constitution'
+					|| $articleAlias === 'constitution-en'
+					|| $categoryAlias === 'projects'
+					|| $categoryAlias === 'projects-en'
+					|| $categoryAlias === 'projects-ru'
+					|| $categoryAlias === 'men-projects-ru'
+					|| $categoryAlias === 'constitution'
+					|| $categoryAlias === 'constitution-en'
+					|| $categoryId === 12
+					|| $categoryId === 18
+					|| stripos($categoryTitle, 'Канстытуц') !== false
+					|| stripos($categoryTitle, 'Конституц') !== false
+					|| stripos($categoryTitle, 'Constitution') !== false
+				) {
+					$pageKeys[] = 'constitution';
+				}
+			}
+		} catch (\RuntimeException $exception) {
+			// Ignore DB lookup failure, assets will fallback to defaults
+		}
+	}
 }
 
 if ($option === 'com_finder') {
@@ -124,7 +214,8 @@ if ($option === 'com_finder') {
 <!DOCTYPE html>
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
 	<head>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<base href="<?php echo htmlspecialchars($baseHref, ENT_QUOTES, 'UTF-8'); ?>" />
 		<jdoc:include type="metas" />
 		<jdoc:include type="styles" />
 		<jdoc:include type="scripts" />
@@ -139,14 +230,14 @@ if ($option === 'com_finder') {
 		<nav class="nav_sec">
 			<div class="nav_wrapper container">
 				<div class="nav_left">
-					<a href="/" class="logo"><img src="<?php echo $tplUri; ?>/assets/logo.svg" alt="" /></a>
+					<a href="/" class="logo"><img src="<?php echo $logoSrc; ?>" alt="" /></a>
 					<div class="nav_menu">
 						<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-							<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
-							<a href="/projects"><p data-label="Праекты">Праекты</p></a>
-							<a href="/news"><p data-label="Навіны">Навіны</p></a>
-							<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
-							<a href="/faq"><p data-label="FAQ">FAQ</p></a>
+							<a href="/constitution"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_CONSTITUTION'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_CONSTITUTION'); ?></p></a>
+							<a href="/projects"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_PROJECTS'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_PROJECTS'); ?></p></a>
+							<a href="/news"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_NEWS'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_NEWS'); ?></p></a>
+							<a href="/about-us"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_ABOUT'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_ABOUT'); ?></p></a>
+							<a href="/faq"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_FAQ'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_FAQ'); ?></p></a>
 						<?php } ?>
 					</div>
 				</div>
@@ -155,38 +246,41 @@ if ($option === 'com_finder') {
 						<input type="hidden" name="option" value="com_finder" />
 						<input type="hidden" name="view" value="search" />
 						<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-						<input type="text" name="q" placeholder="Пошук..." />
+						<input type="text" name="q" placeholder="<?php echo Text::_('TPL_PRASTORA_SEARCH_PLACEHOLDER'); ?>" />
 					</form>
-					<button class="nav_btn">Donate</button>
-					<button class="nav_btn lang_toggler">BEL</button>
+					<button class="nav_btn"><?php echo Text::_('TPL_PRASTORA_ACTION_DONATE'); ?></button>
+					<?php prastoraRenderLanguageSwitcher('desktop'); ?>
 				</div>
 				<img onclick="toggleMenu()" class="mob_menu_btn" src="<?php echo $tplUri; ?>/assets/icons/mob-menu.svg" alt="" />
 			</div>
 		</nav>
 
 		<div class="mob_menu">
-			<div class="mob_exit">
-				<img onclick="toggleMenu()" src="<?php echo $tplUri; ?>/assets/icons/exit.svg" alt="" />
-			</div>
 			<div class="mob_menu_content">
-				<div class="nav_menu">
-					<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
-						<a href="/constitution"><p data-label="Канстытуцыя">Канстытуцыя</p></a>
-						<a href="/projects"><p data-label="Праекты">Праекты</p></a>
-						<a href="/news"><p data-label="Навіны">Навіны</p></a>
-						<a href="/about-us"><p data-label="Пра нас">Пра нас</p></a>
-						<a href="/faq"><p data-label="FAQ">FAQ</p></a>
-					<?php } ?>
+				<div class="mob_menu_header">
+					<a href="/" class="logo mob_menu_logo">
+						<img src="<?php echo $logoSrc; ?>" alt="" />
+					</a>
+					<img onclick="toggleMenu()" class="mob_exit_btn" src="<?php echo $tplUri; ?>/assets/icons/exit.svg" alt="" />
 				</div>
 				<form class="nav_search" action="<?php echo $searchAction; ?>" method="get">
 					<input type="hidden" name="option" value="com_finder" />
 					<input type="hidden" name="view" value="search" />
 					<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
-					<input type="text" name="q" placeholder="Пошук..." />
+					<input type="text" name="q" placeholder="<?php echo Text::_('TPL_PRASTORA_SEARCH_PLACEHOLDER'); ?>" />
 				</form>
+				<div class="nav_menu">
+					<?php $modsMenu = ModuleHelper::getModules('menu'); if (!empty($modsMenu)) { foreach ($modsMenu as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
+						<a href="/constitution"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_CONSTITUTION'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_CONSTITUTION'); ?></p></a>
+						<a href="/projects"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_PROJECTS'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_PROJECTS'); ?></p></a>
+						<a href="/news"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_NEWS'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_NEWS'); ?></p></a>
+						<a href="/about-us"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_ABOUT'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_ABOUT'); ?></p></a>
+						<a href="/faq"><p data-label="<?php echo Text::_('TPL_PRASTORA_NAV_FAQ'); ?>"><?php echo Text::_('TPL_PRASTORA_NAV_FAQ'); ?></p></a>
+					<?php } ?>
+				</div>
 				<div class="mob_menu_actions">
-					<button class="nav_btn">Donate</button>
-					<button class="nav_btn lang_toggler">BEL</button>
+					<?php prastoraRenderLanguageSwitcher('mobile'); ?>
+					<button class="nav_btn"><?php echo Text::_('TPL_PRASTORA_ACTION_DONATE'); ?></button>
 				</div>
 			</div>
 		</div>
@@ -200,26 +294,26 @@ if ($option === 'com_finder') {
 					<div class="footer_main_left">
 						<a href="/" class="footer_logo"><img src="<?php echo $tplUri; ?>/assets/icons/project-icon.svg" alt="" /></a>
 						<div class="footer_email">
-							<h4>Ёсць пытанні або думкі?</h4>
-							<p>Напішыце нам – мы заўсёды гатовыя <br />выслухаць і адказаць.</p>
-							<a href="mailto:hello@prastora.online"><span>hello@prastora.online</span></a>
+							<h4><?php echo Text::_('TPL_PRASTORA_FOOTER_CONTACT_PROMPT'); ?></h4>
+							<p><?php echo Text::_('TPL_PRASTORA_FOOTER_CONTACT_TEXT'); ?></p>
+							<a href="mailto:hello@prastora.info"><span>hello@prastora.info</span></a>
 						</div>
 						<div class="footer_contacts">
-							<h4>Кантакты:</h4>
-							<a href="mailto:hello@prastora.online"><img src="<?php echo $tplUri; ?>/assets/icons/mail.svg" alt="" /><p>hello@prastora.online</p></a>
-							<a href="https://t.me/konstituciya_bel"><img src="<?php echo $tplUri; ?>/assets/icons/tg.svg" alt="" /><p>@konstituciya_bel</p></a>
-							<a href="#"><img src="<?php echo $tplUri; ?>/assets/icons/fb.svg" alt="" /><p>Канстытуцыя Рэспублікі Беларусь</p></a>
+							<h4><?php echo Text::_('TPL_PRASTORA_FOOTER_CONTACTS_LABEL'); ?></h4>
+							<a href="mailto:hello@prastora.info"><img src="<?php echo $tplUri; ?>/assets/icons/mail.svg" alt="" /><p>hello@prastora.info</p></a>
+							<a href="https://t.me/konstituciya_bel" target="_blank"><img src="<?php echo $tplUri; ?>/assets/icons/tg.svg" alt="" /><p><?php echo Text::_('TPL_PRASTORA_FOOTER_TELEGRAM_LATIN'); ?></p></a>
+							<a href="https://www.facebook.com/groups/ConstitutionBelarus" target="_blank"><img src="<?php echo $tplUri; ?>/assets/icons/fb.svg" alt="" /><p><?php echo Text::_('TPL_PRASTORA_FOOTER_CONTACT_FACEBOOK'); ?></p></a>
 						</div>
 					</div>
 					<div class="header_socials">
-						<a href="#"><img src="<?php echo $tplUri; ?>/assets/icons/fb.svg" alt="" /></a>
-						<a href="#"><img src="<?php echo $tplUri; ?>/assets/icons/tg.svg" alt="" /></a>
-						<a href="#"><img src="<?php echo $tplUri; ?>/assets/icons/yt.svg" alt="" /></a>
+						<a href="https://www.facebook.com/groups/ConstitutionBelarus" target="_blank"><img src="<?php echo $tplUri; ?>/assets/icons/fb.svg" alt="" /></a>
+						<a href="https://t.me/konstituciya_bel" target="_blank"><img src="<?php echo $tplUri; ?>/assets/icons/tg.svg" alt="" /></a>
+						<a href="https://www.youtube.com/@PRA_NAS" target="_blank"><img src="<?php echo $tplUri; ?>/assets/icons/yt.svg" alt="" /></a>
 					</div>
 				</div>
 				<div class="footer_btm">
-					<p>© 2021, Светлана Тихановская</p>
-					<a href="/privacy-policy"><p>Privacy Policy</p></a>
+					<p><?php echo Text::_('TPL_PRASTORA_FOOTER_COPYRIGHT'); ?></p>
+					<a href="/privacy-policy"><p><?php echo Text::_('TPL_PRASTORA_FOOTER_PRIVACY'); ?></p></a>
 				</div>
 			</div>
 		</footer>

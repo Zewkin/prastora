@@ -2,6 +2,7 @@
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
 $item = $this->item;
@@ -80,31 +81,31 @@ $prepareRepeatable = static function ($value, array $default = []) {
 	return $default;
 };
 
-$updatedFallback = 'Дата апошняга абнаўлення: 16 ліпеня 2025';
+$updatedFallback = Text::_('TPL_PRASTORA_PRIVACY_LAST_UPDATED');
 $introFallback = [
-	'Мы ў «Прасторы» ставімся да вашай прыватнасці з павагай і адказнасцю.',
-	'Гэтая палітыка тлумачыць, якія даныя мы збіраем, як іх выкарыстоўваем, і якія правы маеце вы як карыстальнік платформы.',
+	Text::_('TPL_PRASTORA_PRIVACY_INTRO1'),
+	Text::_('TPL_PRASTORA_PRIVACY_INTRO2'),
 ];
 
 $sectionsFallback = [
 	[
-		'title' => '1. Мінімум дадзеных — максімум павагі',
+		'title' => Text::_('TPL_PRASTORA_PRIVACY_ITEM1_TITLE'),
 		'body' => [
-			'Вы можаце карыстацца платформай без рэгістрацыі і ідэнтыфікацыі. Мы не патрабуем вашых асабістых дадзеных для ўдзелу ў абмеркаваннях або галасаваннях.',
+			Text::_('TPL_PRASTORA_PRIVACY_ITEM1_TEXT'),
 		],
 	],
 	[
-		'title' => '2. E-mail — толькі па жаданні',
+		'title' => Text::_('TPL_PRASTORA_PRIVACY_ITEM2_TITLE'),
 		'body' => [
-			'Вы можаце дадаткова пакінуць свой e-mail, каб атрымліваць апавяшчэнні пра адказы на вашы каментары. Гэта неабавязкова, і e-mail не бачны іншым карыстальнікам.',
-			'Мы не выкарыстоўваем ваш адрас электроннай пошты ў маркетынгавых мэтах і не перадаем яго трэцім асобам.',
-			'Мы можам збіраць ананімную статыстыку пра выкарыстанне сайта (напрыклад, колькасць наведванняў, клікі), каб палепшыць працу платформы. Гэта не ўключае персанальных дадзеных.',
+			Text::_('TPL_PRASTORA_PRIVACY_ITEM2_TEXT1'),
+			Text::_('TPL_PRASTORA_PRIVACY_ITEM2_TEXT2'),
+			Text::_('TPL_PRASTORA_PRIVACY_ITEM3_TEXT'),
 		],
 	],
 	[
-		'title' => '4. Файлы cookie',
+		'title' => Text::_('TPL_PRASTORA_PRIVACY_ITEM4_TITLE'),
 		'body' => [
-			'Платформа можа выкарыстоўваць тэхнічныя cookie-файлы для правільнай працы асобных функцый (напрыклад, захаванне мовы інтэрфейсу). Вы можаце абмежаваць іх праз налады свайго браўзера.',
+			Text::_('TPL_PRASTORA_PRIVACY_ITEM4_TEXT'),
 		],
 	],
 ];
@@ -148,7 +149,7 @@ if (empty($sections)) {
 	<div class="colored_w container">
 		<div class="policy_container">
 			<div class="page_title">
-				<h2><?php echo htmlspecialchars($item->title ?? 'Палітыка прыватнасці', ENT_QUOTES, 'UTF-8'); ?></h2>
+				<h2><?php echo htmlspecialchars($item->title ?? Text::_('TPL_PRASTORA_PRIVACY_FALLBACK_TITLE'), ENT_QUOTES, 'UTF-8'); ?></h2>
 				<?php if ($updatedLine !== '') : ?>
 					<p><?php echo htmlspecialchars($updatedLine, ENT_QUOTES, 'UTF-8'); ?></p>
 				<?php endif; ?>

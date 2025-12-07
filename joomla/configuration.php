@@ -10,7 +10,7 @@ class JConfig {
 	public $list_limit = 20;
 	public $access = 1;
 	public $frontediting = 1;
-    public $debug = '1';
+    public $debug = '0';
 	public $debug_lang = false;
 	public $debug_lang_const = true;
 	public $dbtype = 'mysqli';
@@ -29,7 +29,7 @@ class JConfig {
 	public $live_site = '';
 	public $secret = 'cfDcxCZS4iJTIckZ';
 	public $gzip = false;
-    public $error_reporting = 'maximum';
+    public $error_reporting = 'default';
 	public $helpurl = 'https://help.joomla.org/proxy?keyref=Help{major}{minor}:{keyref}&lang={langcode}';
 	public $offset = 'UTC';
 	public $cors = false;

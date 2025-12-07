@@ -57,6 +57,13 @@ Options -Indexes
   </IfModule>
 </FilesMatch>
 
+## Open PDF files in browser instead of downloading
+<FilesMatch "\.pdf$">
+  <IfModule mod_headers.c>
+    Header set Content-Disposition "inline"
+  </IfModule>
+</FilesMatch>
+
 ## These directives are only enabled if the Apache mod_rewrite module is enabled
 <IfModule mod_rewrite.c>
 	RewriteEngine On
