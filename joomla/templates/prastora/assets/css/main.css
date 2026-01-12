@@ -51,10 +51,11 @@ body {
 }
 
 .main_header {
+  min-height: 720px;
   background: url(../images/header-bg.png);
   background-position: center top;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: cover;
   margin-top: 20px;
   padding: 12px 45px 40px;
   border-radius: 40px;
@@ -149,6 +150,10 @@ body {
 }
 
 .nav_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   border-radius: 100px;
   height: 33px;
   padding: 0 40px;
@@ -713,7 +718,7 @@ nav {
   width: 90px;
   height: 90px;
   background: url(../images/corner.png) no-repeat bottom right;
-  background-size: contain;
+  background-size: cover;
   z-index: 1; /* выше фона фото, ниже текста и кнопки */
   pointer-events: none;
 }
@@ -896,6 +901,10 @@ nav {
   display: flex;
   align-items: center;
   gap: 40px;
+}
+.partners_list img {
+  height: 46px;
+  width: auto;
 }
 
 footer {
@@ -1795,6 +1804,10 @@ footer {
 
 /* Donate button in mobile menu - narrower */
 .mob_menu_actions .nav_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
   padding: 10px 25px;
   white-space: nowrap;
 }

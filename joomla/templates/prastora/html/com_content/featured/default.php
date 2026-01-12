@@ -648,7 +648,7 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 						<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
 						<input type="text" name="q" placeholder="<?php echo Text::_('TPL_PRASTORA_SEARCH_PLACEHOLDER'); ?>" />
 					</form>
-					<button class="nav_btn">Donate</button>
+					<a href="https://buy.stripe.com/bJeaEX0vy2HDetk9vH33W00" target="_blank" class="nav_btn">Donate</a>
 					<?php prastoraRenderLanguageSwitcher('home-desktop'); ?>
 				</div>
 				<img onclick="toggleMenu()" class="mob_menu_btn" src="<?php echo $tplUri; ?>/assets/icons/mob-menu.svg" alt="" />
@@ -680,7 +680,7 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 					</div>
 				<div class="mob_menu_actions">
 					<?php prastoraRenderLanguageSwitcher('home-mobile'); ?>
-					<button class="nav_btn"><?php echo Text::_('TPL_PRASTORA_ACTION_DONATE'); ?></button>
+					<a href="https://buy.stripe.com/bJeaEX0vy2HDetk9vH33W00" target="_blank" class="nav_btn"><?php echo Text::_("TPL_PRASTORA_ACTION_DONATE"); ?></a>
 				</div>
 			</div>
 		</div>
@@ -688,7 +688,6 @@ $doc->addScript('https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js');
 		<?php $modsHero = ModuleHelper::getModules('hero'); if (!empty($modsHero)) { foreach ($modsHero as $mod) { echo ModuleHelper::renderModule($mod, ['style' => 'none']); } } else { ?>
 		<div class="header_content">
 			<div class="header_main_title">
-				<h2><?php echo Text::_('TPL_PRASTORA_HERO_PRETITLE'); ?></h2>
 				<h1><?php echo Text::_('TPL_PRASTORA_HERO_TITLE'); ?></h1>
 			</div>
 			<div class="header_sec_content">
@@ -1078,10 +1077,8 @@ $playButtonLabel = Text::sprintf('TPL_PRASTORA_VIDEO_PLAY_LABEL', $videoTitle);
 <section class="partners_block container">
 	<div class="block_title"><h2><?php echo Text::_('TPL_PRASTORA_PARTNERS_SECTION_TITLE'); ?></h2></div>
 	<div class="partners_list">
-		<a href="#"><img src="<?php echo $tplUri; ?>/assets/images/partner-1.png" alt="" /></a>
-		<a href="#"><img src="<?php echo $tplUri; ?>/assets/images/partner-2.png" alt="" /></a>
-		<a href="#"><img src="<?php echo $tplUri; ?>/assets/images/partner-1.png" alt="" /></a>
-		<a href="#"><img src="<?php echo $tplUri; ?>/assets/images/partner-2.png" alt="" /></a>
+		<a href="https://tsikhanouskaya.org" target="_blank"><img src="<?php echo $tplUri; ?>/assets/images/logo-tsikhanouskaya.svg" alt="Офіс Святланы Ціханоўскай" /></a>
+		<a href="https://pr-belarus.org" target="_blank"><img src="<?php echo $tplUri; ?>/assets/images/Logo_PR_eng.svg" alt="Personnel Reserve" /></a>
 	</div>
 </section>
 

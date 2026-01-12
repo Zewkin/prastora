@@ -1,168 +1,202 @@
 #
 #<?php die('Forbidden.'); ?>
-#Date: 2025-10-10 14:00:39 UTC
+#Date: 2025-12-10 11:40:33 UTC
 #Software: Joomla! 5.3.3 Stable [ Timu ] 19-August-2025 16:00 GMT
 
 #Fields: date	time	priority	message
-2025-10-10	14:00:39	INFO	Successfully finished task#01 in 0.00 (net 0.00) seconds.
-2025-10-11	18:29:40	INFO	Running task#02 'Session GC'.
-2025-10-11	18:29:40	INFO	Task> SessionGC end
-2025-10-11	18:29:40	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-11	21:02:16	INFO	Running task#03 'Update Notification'.
-2025-10-11	21:02:17	INFO	Task> Could not instantiate mail function.
-2025-10-11	21:02:17	INFO	Task> UpdateNotification end
-2025-10-11	21:02:17	INFO	Successfully finished task#03 in 0.36 (net 0.36) seconds.
-2025-10-12	18:34:37	INFO	Running task#02 'Session GC'.
-2025-10-12	18:34:37	INFO	Task> SessionGC end
-2025-10-12	18:34:37	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-12	21:04:36	INFO	Running task#03 'Update Notification'.
-2025-10-12	21:04:50	INFO	Task> Could not instantiate mail function.
-2025-10-12	21:04:50	INFO	Task> UpdateNotification end
-2025-10-12	21:04:50	INFO	Successfully finished task#03 in 14.48 (net 14.48) seconds.
-2025-10-15	08:55:35	INFO	Running task#02 'Session GC'.
-2025-10-15	08:55:35	INFO	Task> SessionGC end
-2025-10-15	08:55:35	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-15	08:55:43	INFO	Running task#03 'Update Notification'.
-2025-10-15	08:55:43	INFO	Task> Could not instantiate mail function.
-2025-10-15	08:55:43	INFO	Task> UpdateNotification end
-2025-10-15	08:55:43	INFO	Successfully finished task#03 in 0.36 (net 0.36) seconds.
-2025-10-16	14:49:12	INFO	Running task#02 'Session GC'.
-2025-10-16	14:49:12	INFO	Task> SessionGC end
-2025-10-16	14:49:12	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-16	14:49:32	INFO	Running task#03 'Update Notification'.
-2025-10-16	14:49:32	INFO	Task> Could not instantiate mail function.
-2025-10-16	14:49:32	INFO	Task> UpdateNotification end
-2025-10-16	14:49:32	INFO	Successfully finished task#03 in 0.34 (net 0.34) seconds.
-2025-10-18	13:58:34	INFO	Running task#02 'Session GC'.
-2025-10-18	13:58:34	INFO	Task> SessionGC end
-2025-10-18	13:58:34	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-18	13:58:41	INFO	Running task#03 'Update Notification'.
-2025-10-18	13:58:42	INFO	Task> Could not instantiate mail function.
-2025-10-18	13:58:42	INFO	Task> UpdateNotification end
-2025-10-18	13:58:42	INFO	Successfully finished task#03 in 0.40 (net 0.40) seconds.
-2025-10-20	08:48:27	INFO	Running task#02 'Session GC'.
-2025-10-20	08:48:27	INFO	Task> SessionGC end
-2025-10-20	08:48:27	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-20	08:53:27	INFO	Running task#03 'Update Notification'.
-2025-10-20	08:53:27	INFO	Task> Could not instantiate mail function.
-2025-10-20	08:53:27	INFO	Task> UpdateNotification end
-2025-10-20	08:53:27	INFO	Successfully finished task#03 in 0.35 (net 0.35) seconds.
-2025-10-21	08:53:09	INFO	Running task#02 'Session GC'.
-2025-10-21	08:53:09	INFO	Task> SessionGC end
-2025-10-21	08:53:09	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-21	08:58:10	INFO	Running task#03 'Update Notification'.
-2025-10-21	08:58:14	INFO	Task> Could not instantiate mail function.
-2025-10-21	08:58:14	INFO	Task> UpdateNotification end
-2025-10-21	08:58:14	INFO	Successfully finished task#03 in 4.24 (net 4.24) seconds.
-2025-10-22	08:53:20	INFO	Running task#02 'Session GC'.
-2025-10-22	08:53:20	INFO	Task> SessionGC end
-2025-10-22	08:53:20	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-22	08:58:21	INFO	Running task#03 'Update Notification'.
-2025-10-22	08:58:21	INFO	Task> Could not instantiate mail function.
-2025-10-22	08:58:21	INFO	Task> UpdateNotification end
-2025-10-22	08:58:21	INFO	Successfully finished task#03 in 0.31 (net 0.31) seconds.
-2025-10-23	08:54:18	INFO	Running task#02 'Session GC'.
-2025-10-23	08:54:18	INFO	Task> SessionGC end
-2025-10-23	08:54:18	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-23	08:59:19	INFO	Running task#03 'Update Notification'.
-2025-10-23	08:59:19	INFO	Task> Could not instantiate mail function.
-2025-10-23	08:59:19	INFO	Task> UpdateNotification end
-2025-10-23	08:59:19	INFO	Successfully finished task#03 in 0.37 (net 0.37) seconds.
-2025-10-24	08:56:39	INFO	Running task#02 'Session GC'.
-2025-10-24	08:56:39	INFO	Task> SessionGC end
-2025-10-24	08:56:39	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-24	10:23:39	INFO	Running task#03 'Update Notification'.
-2025-10-24	10:23:47	INFO	Successfully finished task#03 in 8.01 (net 8.01) seconds.
-2025-10-25	08:58:48	INFO	Running task#02 'Session GC'.
-2025-10-25	08:58:48	INFO	Task> SessionGC end
-2025-10-25	08:58:48	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-25	10:24:05	INFO	Running task#03 'Update Notification'.
-2025-10-25	10:24:05	INFO	Task> Could not instantiate mail function.
-2025-10-25	10:24:05	INFO	Task> UpdateNotification end
-2025-10-25	10:24:05	INFO	Successfully finished task#03 in 0.41 (net 0.41) seconds.
-2025-10-26	08:58:51	INFO	Running task#02 'Session GC'.
-2025-10-26	08:58:51	INFO	Task> SessionGC end
-2025-10-26	08:58:51	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-26	10:24:08	INFO	Running task#03 'Update Notification'.
-2025-10-26	10:24:08	INFO	Task> Could not instantiate mail function.
-2025-10-26	10:24:08	INFO	Task> UpdateNotification end
-2025-10-26	10:24:08	INFO	Successfully finished task#03 in 0.39 (net 0.39) seconds.
-2025-10-27	08:58:56	INFO	Running task#02 'Session GC'.
-2025-10-27	08:58:56	INFO	Task> SessionGC end
-2025-10-27	08:58:56	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-27	10:24:13	INFO	Running task#03 'Update Notification'.
-2025-10-27	10:24:21	INFO	Successfully finished task#03 in 8.02 (net 8.02) seconds.
-2025-10-28	09:31:03	INFO	Running task#02 'Session GC'.
-2025-10-28	09:31:03	INFO	Task> SessionGC end
-2025-10-28	09:31:03	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-28	10:26:39	INFO	Running task#03 'Update Notification'.
-2025-10-28	10:26:39	INFO	Task> Could not instantiate mail function.
-2025-10-28	10:26:39	INFO	Task> UpdateNotification end
-2025-10-28	10:26:39	INFO	Successfully finished task#03 in 0.31 (net 0.32) seconds.
-2025-10-29	09:41:20	INFO	Running task#02 'Session GC'.
-2025-10-29	09:41:20	INFO	Task> SessionGC end
-2025-10-29	09:41:20	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-29	10:28:26	INFO	Running task#03 'Update Notification'.
-2025-10-29	10:28:27	INFO	Task> Could not instantiate mail function.
-2025-10-29	10:28:27	INFO	Task> UpdateNotification end
-2025-10-29	10:28:27	INFO	Successfully finished task#03 in 0.29 (net 0.29) seconds.
-2025-10-30	09:44:24	INFO	Running task#02 'Session GC'.
-2025-10-30	09:44:24	INFO	Task> SessionGC end
-2025-10-30	09:44:24	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-30	10:29:18	INFO	Running task#03 'Update Notification'.
-2025-10-30	10:29:18	INFO	Task> Could not instantiate mail function.
-2025-10-30	10:29:18	INFO	Task> UpdateNotification end
-2025-10-30	10:29:18	INFO	Successfully finished task#03 in 0.34 (net 0.34) seconds.
-2025-10-31	09:58:55	INFO	Running task#02 'Session GC'.
-2025-10-31	09:58:55	INFO	Task> SessionGC end
-2025-10-31	09:58:55	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-10-31	10:34:02	INFO	Running task#03 'Update Notification'.
-2025-10-31	10:34:02	INFO	Task> Could not instantiate mail function.
-2025-10-31	10:34:02	INFO	Task> UpdateNotification end
-2025-10-31	10:34:02	INFO	Successfully finished task#03 in 0.30 (net 0.30) seconds.
-2025-11-01	10:02:36	INFO	Running task#02 'Session GC'.
-2025-11-01	10:02:36	INFO	Task> SessionGC end
-2025-11-01	10:02:36	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-01	10:37:42	INFO	Running task#03 'Update Notification'.
-2025-11-01	10:37:42	INFO	Task> Could not instantiate mail function.
-2025-11-01	10:37:42	INFO	Task> UpdateNotification end
-2025-11-01	10:37:42	INFO	Successfully finished task#03 in 0.29 (net 0.29) seconds.
-2025-11-02	10:04:02	INFO	Running task#02 'Session GC'.
-2025-11-02	10:04:02	INFO	Task> SessionGC end
-2025-11-02	10:04:02	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-02	10:39:09	INFO	Running task#03 'Update Notification'.
-2025-11-02	10:39:13	INFO	Successfully finished task#03 in 4.14 (net 4.14) seconds.
-2025-11-03	12:53:44	INFO	Running task#02 'Session GC'.
-2025-11-03	12:53:44	INFO	Task> SessionGC end
-2025-11-03	12:53:44	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-03	12:54:32	INFO	Running task#03 'Update Notification'.
-2025-11-03	12:54:32	INFO	Task> Could not instantiate mail function.
-2025-11-03	12:54:32	INFO	Task> UpdateNotification end
-2025-11-03	12:54:32	INFO	Successfully finished task#03 in 0.34 (net 0.34) seconds.
-2025-11-05	15:19:42	INFO	Running task#02 'Session GC'.
-2025-11-05	15:19:42	INFO	Task> SessionGC end
-2025-11-05	15:19:42	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-05	15:19:53	INFO	Running task#03 'Update Notification'.
-2025-11-05	15:19:54	INFO	Task> Could not instantiate mail function.
-2025-11-05	15:19:54	INFO	Task> UpdateNotification end
-2025-11-05	15:19:54	INFO	Successfully finished task#03 in 0.42 (net 0.42) seconds.
-2025-11-06	15:38:50	INFO	Running task#02 'Session GC'.
-2025-11-06	15:38:50	INFO	Task> SessionGC end
-2025-11-06	15:38:50	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-06	15:38:56	INFO	Running task#03 'Update Notification'.
-2025-11-06	15:38:57	INFO	Task> Could not instantiate mail function.
-2025-11-06	15:38:57	INFO	Task> UpdateNotification end
-2025-11-06	15:38:57	INFO	Successfully finished task#03 in 0.31 (net 0.31) seconds.
-2025-11-07	15:41:33	INFO	Running task#02 'Session GC'.
-2025-11-07	15:41:33	INFO	Task> SessionGC end
-2025-11-07	15:41:33	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-07	15:42:22	INFO	Running task#03 'Update Notification'.
-2025-11-07	15:42:23	INFO	Task> Could not instantiate mail function.
-2025-11-07	15:42:23	INFO	Task> UpdateNotification end
-2025-11-07	15:42:23	INFO	Successfully finished task#03 in 0.43 (net 0.43) seconds.
-2025-11-10	13:16:39	INFO	Running task#02 'Session GC'.
-2025-11-10	13:16:39	INFO	Task> SessionGC end
-2025-11-10	13:16:39	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
-2025-11-10	13:16:47	INFO	Running task#03 'Update Notification'.
-2025-11-10	13:16:55	INFO	Successfully finished task#03 in 8.02 (net 8.02) seconds.
-2025-11-10	13:19:33	INFO	Running task#01 'Rotate Logs'.
+2025-12-10	11:40:33	INFO	Successfully finished task#01 in 0.00 (net 0.00) seconds.
+2025-12-10	18:50:28	INFO	Running task#02 'Session GC'.
+2025-12-10	18:50:28	INFO	Task> SessionGC end
+2025-12-10	18:50:28	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-10	21:09:18	INFO	Running task#03 'Update Notification'.
+2025-12-10	21:09:18	INFO	Task> Could not instantiate mail function.
+2025-12-10	21:09:18	INFO	Task> UpdateNotification end
+2025-12-10	21:09:18	INFO	Successfully finished task#03 in 0.13 (net 0.13) seconds.
+2025-12-11	21:01:14	INFO	Running task#02 'Session GC'.
+2025-12-11	21:01:14	INFO	Task> SessionGC end
+2025-12-11	21:01:14	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-11	23:39:59	INFO	Running task#03 'Update Notification'.
+2025-12-11	23:39:59	INFO	Task> Could not instantiate mail function.
+2025-12-11	23:39:59	INFO	Task> UpdateNotification end
+2025-12-11	23:39:59	INFO	Successfully finished task#03 in 0.22 (net 0.22) seconds.
+2025-12-13	08:18:53	INFO	Running task#02 'Session GC'.
+2025-12-13	08:18:53	INFO	Task> SessionGC end
+2025-12-13	08:18:53	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-13	08:20:44	INFO	Running task#03 'Update Notification'.
+2025-12-13	08:20:44	INFO	Task> Could not instantiate mail function.
+2025-12-13	08:20:44	INFO	Task> UpdateNotification end
+2025-12-13	08:20:44	INFO	Successfully finished task#03 in 0.26 (net 0.26) seconds.
+2025-12-14	21:17:47	INFO	Running task#02 'Session GC'.
+2025-12-14	21:17:47	INFO	Task> SessionGC end
+2025-12-14	21:17:47	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-14	21:17:52	INFO	Running task#03 'Update Notification'.
+2025-12-14	21:17:52	INFO	Task> Could not instantiate mail function.
+2025-12-14	21:17:52	INFO	Task> UpdateNotification end
+2025-12-14	21:17:52	INFO	Successfully finished task#03 in 0.26 (net 0.26) seconds.
+2025-12-15	21:37:24	INFO	Running task#02 'Session GC'.
+2025-12-15	21:37:24	INFO	Task> SessionGC end
+2025-12-15	21:37:24	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-15	21:37:31	INFO	Running task#03 'Update Notification'.
+2025-12-15	21:37:31	INFO	Task> Could not instantiate mail function.
+2025-12-15	21:37:31	INFO	Task> UpdateNotification end
+2025-12-15	21:37:31	INFO	Successfully finished task#03 in 0.21 (net 0.21) seconds.
+2025-12-17	09:56:49	INFO	Running task#02 'Session GC'.
+2025-12-17	09:56:49	INFO	Task> SessionGC end
+2025-12-17	09:56:49	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-17	10:01:49	INFO	Running task#03 'Update Notification'.
+2025-12-17	10:01:49	INFO	Task> Could not instantiate mail function.
+2025-12-17	10:01:49	INFO	Task> UpdateNotification end
+2025-12-17	10:01:49	INFO	Successfully finished task#03 in 0.22 (net 0.22) seconds.
+2025-12-18	14:10:10	INFO	Running task#02 'Session GC'.
+2025-12-18	14:10:10	INFO	Task> SessionGC end
+2025-12-18	14:10:10	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-18	14:15:10	INFO	Running task#03 'Update Notification'.
+2025-12-18	14:15:10	INFO	Task> Could not instantiate mail function.
+2025-12-18	14:15:10	INFO	Task> UpdateNotification end
+2025-12-18	14:15:10	INFO	Successfully finished task#03 in 0.22 (net 0.22) seconds.
+2025-12-19	15:12:43	INFO	Running task#02 'Session GC'.
+2025-12-19	15:12:43	INFO	Task> SessionGC end
+2025-12-19	15:12:43	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-19	15:12:43	INFO	Running task#03 'Update Notification'.
+2025-12-19	15:12:43	INFO	Task> Could not instantiate mail function.
+2025-12-19	15:12:43	INFO	Task> UpdateNotification end
+2025-12-19	15:12:43	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2025-12-20	16:54:25	INFO	Running task#02 'Session GC'.
+2025-12-20	16:54:25	INFO	Task> SessionGC end
+2025-12-20	16:54:25	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-20	19:29:09	INFO	Running task#03 'Update Notification'.
+2025-12-20	19:29:10	INFO	Task> Could not instantiate mail function.
+2025-12-20	19:29:10	INFO	Task> UpdateNotification end
+2025-12-20	19:29:10	INFO	Successfully finished task#03 in 0.18 (net 0.18) seconds.
+2025-12-21	16:54:52	INFO	Running task#02 'Session GC'.
+2025-12-21	16:54:52	INFO	Task> SessionGC end
+2025-12-21	16:54:52	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-21	21:11:58	INFO	Running task#03 'Update Notification'.
+2025-12-21	21:11:58	INFO	Task> Could not instantiate mail function.
+2025-12-21	21:11:58	INFO	Task> UpdateNotification end
+2025-12-21	21:11:58	INFO	Successfully finished task#03 in 0.20 (net 0.20) seconds.
+2025-12-22	16:57:25	INFO	Running task#02 'Session GC'.
+2025-12-22	16:57:25	INFO	Task> SessionGC end
+2025-12-22	16:57:25	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-23	00:44:01	INFO	Running task#03 'Update Notification'.
+2025-12-23	00:44:02	INFO	Task> Could not instantiate mail function.
+2025-12-23	00:44:02	INFO	Task> UpdateNotification end
+2025-12-23	00:44:02	INFO	Successfully finished task#03 in 0.14 (net 0.14) seconds.
+2025-12-23	16:57:40	INFO	Running task#02 'Session GC'.
+2025-12-23	16:57:40	INFO	Task> SessionGC end
+2025-12-23	16:57:40	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-24	01:06:32	INFO	Running task#03 'Update Notification'.
+2025-12-24	01:06:32	INFO	Task> Could not instantiate mail function.
+2025-12-24	01:06:32	INFO	Task> UpdateNotification end
+2025-12-24	01:06:32	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2025-12-24	17:44:08	INFO	Running task#02 'Session GC'.
+2025-12-24	17:44:08	INFO	Task> SessionGC end
+2025-12-24	17:44:08	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-25	03:57:56	INFO	Running task#03 'Update Notification'.
+2025-12-25	03:57:56	INFO	Task> Could not instantiate mail function.
+2025-12-25	03:57:56	INFO	Task> UpdateNotification end
+2025-12-25	03:57:56	INFO	Successfully finished task#03 in 0.13 (net 0.13) seconds.
+2025-12-26	09:04:37	INFO	Running task#02 'Session GC'.
+2025-12-26	09:04:37	INFO	Task> SessionGC end
+2025-12-26	09:04:37	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-26	09:04:49	INFO	Running task#03 'Update Notification'.
+2025-12-26	09:04:49	INFO	Task> Could not instantiate mail function.
+2025-12-26	09:04:49	INFO	Task> UpdateNotification end
+2025-12-26	09:04:49	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2025-12-27	14:58:42	INFO	Running task#02 'Session GC'.
+2025-12-27	14:58:42	INFO	Task> SessionGC end
+2025-12-27	14:58:42	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-27	16:00:32	INFO	Running task#03 'Update Notification'.
+2025-12-27	16:00:32	INFO	Task> Could not instantiate mail function.
+2025-12-27	16:00:32	INFO	Task> UpdateNotification end
+2025-12-27	16:00:32	INFO	Successfully finished task#03 in 0.20 (net 0.20) seconds.
+2025-12-28	15:05:42	INFO	Running task#02 'Session GC'.
+2025-12-28	15:05:42	INFO	Task> SessionGC end
+2025-12-28	15:05:42	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-28	17:30:41	INFO	Задача #03 (Update Notification) выполняется.
+2025-12-28	17:30:41	INFO	Task > Could not instantiate mail function.
+2025-12-28	17:30:41	INFO	Task > UpdateNotification end
+2025-12-28	17:30:41	INFO	Задача #03 успешно выполнена за 0.16 (0.16) секунд.
+2025-12-29	15:54:50	INFO	Running task#02 'Session GC'.
+2025-12-29	15:54:50	INFO	Task> SessionGC end
+2025-12-29	15:54:50	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-29	18:32:42	INFO	Running task#03 'Update Notification'.
+2025-12-29	18:32:42	INFO	Task> Could not instantiate mail function.
+2025-12-29	18:32:42	INFO	Task> UpdateNotification end
+2025-12-29	18:32:42	INFO	Successfully finished task#03 in 0.13 (net 0.13) seconds.
+2025-12-30	16:45:26	INFO	Running task#02 'Session GC'.
+2025-12-30	16:45:26	INFO	Task> SessionGC end
+2025-12-30	16:45:26	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2025-12-30	18:45:36	INFO	Running task#03 'Update Notification'.
+2025-12-30	18:45:36	INFO	Task> Could not instantiate mail function.
+2025-12-30	18:45:36	INFO	Task> UpdateNotification end
+2025-12-30	18:45:36	INFO	Successfully finished task#03 in 0.18 (net 0.18) seconds.
+2025-12-31	17:32:48	INFO	Задача #02 (Session GC) выполняется.
+2025-12-31	17:32:48	INFO	Task > SessionGC end
+2025-12-31	17:32:48	INFO	Задача #02 успешно выполнена за 0.00 (0.00) секунд.
+2025-12-31	18:46:33	INFO	Running task#03 'Update Notification'.
+2025-12-31	18:46:33	INFO	Task> Could not instantiate mail function.
+2025-12-31	18:46:33	INFO	Task> UpdateNotification end
+2025-12-31	18:46:33	INFO	Successfully finished task#03 in 0.16 (net 0.16) seconds.
+2026-01-01	17:35:40	INFO	Running task#02 'Session GC'.
+2026-01-01	17:35:40	INFO	Task> SessionGC end
+2026-01-01	17:35:40	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-01	18:49:23	INFO	Running task#03 'Update Notification'.
+2026-01-01	18:49:23	INFO	Task> Could not instantiate mail function.
+2026-01-01	18:49:23	INFO	Task> UpdateNotification end
+2026-01-01	18:49:23	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2026-01-02	17:40:05	INFO	Задача #02 (Session GC) выполняется.
+2026-01-02	17:40:05	INFO	Task > SessionGC end
+2026-01-02	17:40:05	INFO	Задача #02 успешно выполнена за 0.00 (0.00) секунд.
+2026-01-02	18:58:12	INFO	Running task#03 'Update Notification'.
+2026-01-02	18:58:12	INFO	Task> Could not instantiate mail function.
+2026-01-02	18:58:12	INFO	Task> UpdateNotification end
+2026-01-02	18:58:12	INFO	Successfully finished task#03 in 0.28 (net 0.28) seconds.
+2026-01-03	18:41:38	INFO	Running task#02 'Session GC'.
+2026-01-03	18:41:38	INFO	Task> SessionGC end
+2026-01-03	18:41:38	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-03	21:11:42	INFO	Running task#03 'Update Notification'.
+2026-01-03	21:11:42	INFO	Task> Could not instantiate mail function.
+2026-01-03	21:11:42	INFO	Task> UpdateNotification end
+2026-01-03	21:11:42	INFO	Successfully finished task#03 in 0.16 (net 0.16) seconds.
+2026-01-04	19:00:08	INFO	Running task#02 'Session GC'.
+2026-01-04	19:00:08	INFO	Task> SessionGC end
+2026-01-04	19:00:08	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-04	22:05:04	INFO	Running task#03 'Update Notification'.
+2026-01-04	22:05:04	INFO	Task> Could not instantiate mail function.
+2026-01-04	22:05:04	INFO	Task> Could not instantiate mail function.
+2026-01-04	22:05:04	INFO	Task> UpdateNotification end
+2026-01-04	22:05:05	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2026-01-05	19:01:42	INFO	Running task#02 'Session GC'.
+2026-01-05	19:01:42	INFO	Task> SessionGC end
+2026-01-05	19:01:43	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-05	22:28:46	INFO	Running task#03 'Update Notification'.
+2026-01-05	22:28:46	INFO	Task> Could not instantiate mail function.
+2026-01-05	22:28:46	INFO	Task> Could not instantiate mail function.
+2026-01-05	22:28:46	INFO	Task> UpdateNotification end
+2026-01-05	22:28:46	INFO	Successfully finished task#03 in 0.11 (net 0.11) seconds.
+2026-01-06	19:01:52	INFO	Running task#02 'Session GC'.
+2026-01-06	19:01:52	INFO	Task> SessionGC end
+2026-01-06	19:01:52	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-06	22:38:46	INFO	Running task#03 'Update Notification'.
+2026-01-06	22:38:47	INFO	Task> Could not instantiate mail function.
+2026-01-06	22:38:47	INFO	Task> Could not instantiate mail function.
+2026-01-06	22:38:47	INFO	Task> UpdateNotification end
+2026-01-06	22:38:47	INFO	Successfully finished task#03 in 0.15 (net 0.15) seconds.
+2026-01-07	19:03:02	INFO	Running task#02 'Session GC'.
+2026-01-07	19:03:02	INFO	Task> SessionGC end
+2026-01-07	19:03:03	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-07	22:51:56	INFO	Running task#03 'Update Notification'.
+2026-01-07	22:51:56	INFO	Task> Could not instantiate mail function.
+2026-01-07	22:51:56	INFO	Task> Could not instantiate mail function.
+2026-01-07	22:51:56	INFO	Task> UpdateNotification end
+2026-01-07	22:51:56	INFO	Successfully finished task#03 in 0.16 (net 0.16) seconds.
+2026-01-08	19:07:02	INFO	Running task#02 'Session GC'.
+2026-01-08	19:07:02	INFO	Task> SessionGC end
+2026-01-08	19:07:02	INFO	Successfully finished task#02 in 0.00 (net 0.00) seconds.
+2026-01-08	22:52:53	INFO	Running task#03 'Update Notification'.
+2026-01-08	22:52:53	INFO	Task> Could not instantiate mail function.
+2026-01-08	22:52:53	INFO	Task> Could not instantiate mail function.
+2026-01-08	22:52:53	INFO	Task> UpdateNotification end
+2026-01-08	22:52:53	INFO	Successfully finished task#03 in 0.08 (net 0.08) seconds.
+2026-01-09	11:00:21	INFO	Running task#01 'Rotate Logs'.

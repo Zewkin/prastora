@@ -4,6 +4,7 @@ services:
   db:
     image: mysql:8
     command: --disable-log-bin
+    restart: always
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
@@ -18,24 +19,28 @@ services:
     image: joomla:5-apache
     depends_on:
       - db
+    restart: always
     dns:
-      - 10.42.42.4
+      - 8.8.8.8
     environment:
       JOOMLA_DB_HOST: db:3306
       JOOMLA_DB_USER: ${MYSQL_USER}
       JOOMLA_DB_PASSWORD: ${MYSQL_PASSWORD}
       JOOMLA_DB_NAME: ${MYSQL_DATABASE}
+      PHP_INI_SCAN_DIR: ":/usr/local/etc/php/conf.d.custom"
     ports:
       - "${JOOMLA_HTTP_PORT:-8888}:80"
     volumes:
       - ./joomla:/var/www/html
+      - ./php-custom:/usr/local/etc/php/conf.d.custom
     command: >
-      bash -c "a2enmod headers && apache2-foreground"
+      bash -c "echo 'opcache.enable=0' > /usr/local/etc/php/conf.d/zzz-disable-opcache.ini && a2enmod headers && apache2-foreground"
 
   phpmyadmin:
     image: phpmyadmin:latest
     depends_on:
       - db
+    restart: always
     environment:
       PMA_HOST: db
     ports:
@@ -43,6 +48,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog
+    restart: always
     ports:
       - "${MAILHOG_SMTP_PORT:-1025}:1025"
       - "${MAILHOG_HTTP_PORT:-8025}:8025"

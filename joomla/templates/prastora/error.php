@@ -69,7 +69,7 @@ $searchAction = $searchMenuItem
 						<img src="<?php echo $tplUri; ?>/assets/icons/lupa.svg" alt="" />
 						<input type="text" placeholder="<?php echo Text::_('TPL_PRASTORA_SEARCH_PLACEHOLDER'); ?>" />
 					</div>
-					<button class="nav_btn"><?php echo Text::_('TPL_PRASTORA_ACTION_DONATE'); ?></button>
+					<a href="https://buy.stripe.com/bJeaEX0vy2HDetk9vH33W00" target="_blank" class="nav_btn"><?php echo Text::_("TPL_PRASTORA_ACTION_DONATE"); ?></a>
 					<?php prastoraRenderLanguageSwitcher('error-desktop'); ?>
 				</div>
 				<img onclick="toggleMenu()" class="mob_menu_btn" src="<?php echo $tplUri; ?>/assets/icons/mob-menu.svg" alt="" />
@@ -107,7 +107,7 @@ $searchAction = $searchMenuItem
 				</div>
 				<div class="mob_menu_actions">
 					<?php prastoraRenderLanguageSwitcher('error-mobile'); ?>
-					<button class="nav_btn"><?php echo Text::_('TPL_PRASTORA_ACTION_DONATE'); ?></button>
+					<a href="https://buy.stripe.com/bJeaEX0vy2HDetk9vH33W00" target="_blank" class="nav_btn"><?php echo Text::_("TPL_PRASTORA_ACTION_DONATE"); ?></a>
 				</div>
 			</div>
 		</div>
