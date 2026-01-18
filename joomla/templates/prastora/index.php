@@ -9,6 +9,7 @@ use Joomla\CMS\Router\Route;
 use Joomla\Database\ParameterType;
 
 require_once __DIR__ . '/helpers/language.php';
+require_once __DIR__ . '/helpers/category.php';
 
 $app = Factory::getApplication();
 $language = $app->getLanguage();
@@ -113,6 +114,7 @@ if ($option === 'com_content' && $view === 'article') {
 					$db->quoteName('a.catid'),
 					$db->quoteName('c.alias', 'category_alias'),
 					$db->quoteName('c.title', 'category_title'),
+					$db->quoteName('c.path', 'category_path'),
 				])
 				->from($db->quoteName('#__content', 'a'))
 				->join('LEFT', $db->quoteName('#__categories', 'c') . ' ON ' . $db->quoteName('c.id') . ' = ' . $db->quoteName('a.catid'))
@@ -126,22 +128,38 @@ if ($option === 'com_content' && $view === 'article') {
 				$categoryAlias = strtolower((string) ($articleMeta->category_alias ?? ''));
 				$categoryTitle = (string) ($articleMeta->category_title ?? '');
 				$categoryId = (int) ($articleMeta->catid ?? 0);
+				$categoryPath = (string) ($articleMeta->category_path ?? '');
+
+				$loadConstitutionAssets = false;
+
+				if (in_array($articleAlias, ['constitution', 'constitution-en', 'constitution-ru'], true)) {
+					$loadConstitutionAssets = true;
+				}
+
+				if (!$loadConstitutionAssets && in_array($categoryAlias, ['constitution', 'constitution-en', 'constitution-ru'], true)) {
+					$loadConstitutionAssets = true;
+				}
 
 				if (
-					$articleAlias === 'constitution'
-					|| $articleAlias === 'constitution-en'
-					|| $categoryAlias === 'projects'
-					|| $categoryAlias === 'projects-en'
-					|| $categoryAlias === 'projects-ru'
-					|| $categoryAlias === 'men-projects-ru'
-					|| $categoryAlias === 'constitution'
-					|| $categoryAlias === 'constitution-en'
-					|| $categoryId === 12
-					|| $categoryId === 18
-					|| stripos($categoryTitle, 'Канстытуц') !== false
-					|| stripos($categoryTitle, 'Конституц') !== false
-					|| stripos($categoryTitle, 'Constitution') !== false
+					!$loadConstitutionAssets
+					&& function_exists('prastoraIsProjectsCategory')
+					&& prastoraIsProjectsCategory($categoryId, $categoryAlias, $categoryPath)
 				) {
+					$loadConstitutionAssets = true;
+				}
+
+				if (
+					!$loadConstitutionAssets
+					&& (
+						stripos($categoryTitle, 'Канстытуц') !== false
+						|| stripos($categoryTitle, 'Конституц') !== false
+						|| stripos($categoryTitle, 'Constitution') !== false
+					)
+				) {
+					$loadConstitutionAssets = true;
+				}
+
+				if ($loadConstitutionAssets) {
 					$pageKeys[] = 'constitution';
 				}
 			}

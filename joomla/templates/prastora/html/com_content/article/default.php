@@ -6,6 +6,11 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\Fields\Administrator\Helper\FieldsHelper;
 
+$helperPath = __DIR__ . '/../../../helpers/category.php';
+if (is_file($helperPath)) {
+	require_once $helperPath;
+}
+
 $app     = Factory::getApplication();
 $template = $app->getTemplate();
 $tplUri  = rtrim(Uri::root(true), '/') . '/templates/' . $template;
@@ -19,20 +24,18 @@ if (isset($item->catid)) {
     $categoryId = (int) $item->catid;
     $categoryAlias = strtolower((string) ($item->category_alias ?? ''));
     $categoryTitle = (string) ($item->category_title ?? '');
+    $categoryPath = (string) ($item->category_path ?? '');
 
-    if (
-        $categoryId === 12
-		|| $categoryId === 18
-        || $categoryAlias === 'projects'
-        || $categoryAlias === 'projects-en'
-        || $categoryAlias === 'projects-ru'
-        || $categoryAlias === 'men-projects-ru'
-        || stripos($categoryTitle, 'Канстытуц') !== false
-        || stripos($categoryTitle, 'Конституц') !== false
-    ) {
-        echo $this->loadTemplate('constitution');
-        return;
-    }
+	// Projects root or any descendant -> constitution layout
+	if (function_exists('prastoraIsProjectsCategory') && prastoraIsProjectsCategory($categoryId, $categoryAlias, $categoryPath)) {
+		echo $this->loadTemplate('constitution');
+		return;
+	}
+	// Fallback by title if helper unavailable
+	if (stripos($categoryTitle, 'Канстытуц') !== false || stripos($categoryTitle, 'Конституц') !== false) {
+		echo $this->loadTemplate('constitution');
+		return;
+	}
 }
 $alias = isset($item->alias) ? strtolower((string) $item->alias) : '';
 $specialLayouts = [
@@ -59,11 +62,13 @@ $images = json_decode($item->images ?? '{}');
 				<div class="news_descriptions">
 					<?php if (!empty($item->category_title)) : ?>
 					<div class="news_description_hash"><span><?php echo htmlspecialchars($item->category_title, ENT_QUOTES, 'UTF-8'); ?></span></div>
+					<?php endif; ?>
+					<?php if (!empty($item->category_title)) : ?>
 					<div class="dot"></div>
 					<?php endif; ?>
-					<p><?php echo htmlspecialchars($item->author ?? $item->created_by_alias ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
-					<div class="dot"></div>
+					<?php if (!empty($item->publish_up) || !empty($item->created)) : ?>
 					<p><?php echo JHtml::_('date', $item->publish_up ?? $item->created, Text::_('DATE_FORMAT_LC3')); ?></p>
+					<?php endif; ?>
 				</div>
 			</div>
 

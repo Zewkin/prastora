@@ -70,17 +70,92 @@ $filterTag = trim($input->getString('tag', ''));
 // Get subcategories of current category for filter menu (direct SQL to avoid nested set issues)
 $langTag = $app->getLanguage()->getTag();
 $db = Factory::getDbo();
-$query = $db->getQuery(true)
-    ->select('id, title, alias')
-    ->from($db->quoteName('#__categories'))
-    ->where('parent_id = ' . (int) $this->category->id)
-    ->where('published = 1')
-    ->where('extension = ' . $db->quote('com_content'))
-    ->where('alias != ' . $db->quote('uncategorised'))
-    ->where('(language = ' . $db->quote('*') . ' OR language = ' . $db->quote($langTag) . ')')
-    ->order('lft ASC');
-$db->setQuery($query);
-$subcategories = $db->loadObjectList() ?: [];
+
+// Prefer children prepared by the view (already filtered by Joomla)
+$subcategories = [];
+if (!empty($this->children[(int) $this->category->id])) {
+	foreach ($this->children[(int) $this->category->id] as $child) {
+		$subcategories[] = (object) [
+			'id' => (int) $child->id,
+			'title' => (string) $child->title,
+			'alias' => (string) $child->alias,
+		];
+	}
+}
+
+// Try to fetch direct children via the Categories API to respect language and access
+if (empty($subcategories)) {
+	try {
+		$categoriesTree = Categories::getInstance('Content', ['access' => true, 'published' => 1, 'language_filter' => true]);
+		$currentCategory = $categoriesTree ? $categoriesTree->get((int) $this->category->id) : null;
+		if ($currentCategory) {
+			$children = $currentCategory->getChildren(true);
+			foreach ($children as $child) {
+				if ((int) ($child->published ?? 0) !== 1) {
+					continue;
+				}
+				$childLanguage = (string) ($child->language ?? '*');
+				if ($childLanguage !== '*' && strcasecmp($childLanguage, $langTag) !== 0) {
+					continue;
+				}
+				$subcategories[] = (object) [
+					'id' => (int) $child->id,
+					'title' => (string) $child->title,
+					'alias' => (string) $child->alias,
+				];
+			}
+		}
+	} catch (\Throwable $exception) {
+		$subcategories = [];
+	}
+}
+
+// Fallback to direct SQL if API did not return children (e.g. cache miss)
+if (empty($subcategories)) {
+	$query = $db->getQuery(true)
+		->select('id, title, alias')
+		->from($db->quoteName('#__categories'))
+		->where('parent_id = ' . (int) $this->category->id)
+		->where('published = 1')
+		->where('extension = ' . $db->quote('com_content'))
+		->where('alias != ' . $db->quote('uncategorised'))
+		->where('(language = ' . $db->quote('*') . ' OR language = ' . $db->quote($langTag) . ')')
+		->order('lft ASC');
+	$db->setQuery($query);
+	$subcategories = $db->loadObjectList() ?: [];
+}
+
+// Last-resort fallback: ignore language filter so renamed/translated categories still show
+if (empty($subcategories)) {
+	$query = $db->getQuery(true)
+		->select('id, title, alias')
+		->from($db->quoteName('#__categories'))
+		->where('parent_id = ' . (int) $this->category->id)
+		->where('published = 1')
+		->where('extension = ' . $db->quote('com_content'))
+		->where('alias != ' . $db->quote('uncategorised'))
+		->order('lft ASC');
+	$db->setQuery($query);
+	$subcategories = $db->loadObjectList() ?: [];
+}
+
+// Path-based fallback (direct children by nested set path)
+if (empty($subcategories) && !empty($this->category->path)) {
+	$pathPrefix = rtrim((string) $this->category->path, '/') . '/';
+	$targetLevel = isset($this->category->level) ? ((int) $this->category->level + 1) : 0;
+	$query = $db->getQuery(true)
+		->select('id, title, alias')
+		->from($db->quoteName('#__categories'))
+		->where($db->quoteName('path') . ' LIKE ' . $db->quote($pathPrefix . '%'))
+		->where('published = 1')
+		->where('extension = ' . $db->quote('com_content'))
+		->where('alias != ' . $db->quote('uncategorised'));
+	if ($targetLevel > 0) {
+		$query->where($db->quoteName('level') . ' = ' . $targetLevel);
+	}
+	$db->setQuery($query);
+	$subcategories = $db->loadObjectList() ?: [];
+}
 
 // Collect all subcategory IDs for "All" filter
 $subcatIds = array_map(function($s) { return (int) $s->id; }, $subcategories);
@@ -98,32 +173,39 @@ if ($filterCat > 0 && in_array($filterCat, $subcatIds, true)) {
         ->order('a.publish_up DESC, a.created DESC');
     $db->setQuery($query);
     $items = $db->loadObjectList() ?: [];
+    // Create slug field for routing
+    foreach ($items as $item) {
+        if (!isset($item->slug) && isset($item->id) && isset($item->alias)) {
+            $item->slug = $item->id . ':' . $item->alias;
+        }
+    }
 } elseif ($filterCat > 0) {
     // Filter within current category items
     $items = array_values(array_filter($items, function ($it) use ($filterCat) {
         return (int) $it->catid === (int) $filterCat;
     }));
 } else {
-    // "All" - add subcategory articles to current category articles
+    // "All" - show articles from current category AND all subcategories
     if (!empty($subcatIds)) {
+        $allCategoryIds = array_merge([(int) $this->category->id], $subcatIds);
         $query = $db->getQuery(true)
             ->select('a.*, c.title AS category_title, c.alias AS category_alias')
             ->from($db->quoteName('#__content', 'a'))
             ->join('LEFT', $db->quoteName('#__categories', 'c') . ' ON c.id = a.catid')
-            ->where('a.catid IN (' . implode(',', $subcatIds) . ')')
+            ->where('a.catid IN (' . implode(',', $allCategoryIds) . ')')
             ->where('a.state = 1')
             ->where('a.access = 1')
             ->order('a.publish_up DESC, a.created DESC');
         $db->setQuery($query);
-        $subcatItems = $db->loadObjectList() ?: [];
-        $items = array_merge($items, $subcatItems);
-        // Sort by date
-        usort($items, function($a, $b) {
-            $dateA = strtotime($a->publish_up ?: $a->created);
-            $dateB = strtotime($b->publish_up ?: $b->created);
-            return $dateB - $dateA;
-        });
+        $items = $db->loadObjectList() ?: [];
+        // Create slug field for routing
+        foreach ($items as $item) {
+            if (!isset($item->slug) && isset($item->id) && isset($item->alias)) {
+                $item->slug = $item->id . ':' . $item->alias;
+            }
+        }
     }
+    // If no subcategories, $items already contains current category articles from Joomla
 }
 
 // Apply date filter
@@ -155,8 +237,12 @@ if ($filterTag !== '') {
 
 $pagination = $this->pagination ?? null;
 $limit      = 9;
-$totalItems = (is_object($pagination) && isset($pagination->total)) ? (int) $pagination->total : count($items);
-$limitStart = (is_object($pagination) && isset($pagination->limitstart)) ? (int) $pagination->limitstart : max(0, $input->getInt('start', 0));
+$totalItems = count($items);
+$limitStart = max(0, $input->getInt('start', 0));
+
+if ($limitStart >= $totalItems && $totalItems > 0) {
+	$limitStart = max(0, (int) (floor(($totalItems - 1) / $limit) * $limit));
+}
 
 if ($totalItems > 0) {
     $pagesTotal = (int) ceil($totalItems / $limit);
@@ -171,12 +257,14 @@ if ($totalItems > 0) {
     $current    = 1;
 }
 
-$items = array_slice($items, 0, $limit);
+$items = array_slice($items, $limitStart, $limit);
 
 if (is_object($pagination)) {
-    $pagination->limit       = $limit;
-    $pagination->pagesTotal  = $pagesTotal;
+    $pagination->limit        = $limit;
+    $pagination->pagesTotal   = $pagesTotal;
     $pagination->pagesCurrent = $current;
+    $pagination->total        = $totalItems;
+    $pagination->limitstart   = $limitStart;
 }
 ?>
 <div class="projects_page container">
@@ -186,11 +274,18 @@ if (is_object($pagination)) {
 				<?php
 					$base = Uri::getInstance();
 					$baseQuery = $base->getQuery(true);
-					unset($baseQuery['start']);
+					unset($baseQuery['start'], $baseQuery['type']);
 					$basePath = $base->getPath();
 					$sep = empty($baseQuery) ? '?' : ('?' . http_build_query($baseQuery) . '&');
 					$allActive = $filterCat === 0 ? ' projects_nav_menu_item_active' : '';
-					echo '<div class="projects_nav_menu_item' . $allActive . '"><a href="' . Route::_($basePath . $sep . 'type=0') . '"><p>' . htmlspecialchars(Text::_('TPL_PRASTORA_PROJECTS_FILTER_ALL'), ENT_QUOTES, 'UTF-8') . '</p></a></div>';
+					
+					// Determine if this is the projects category
+					$categoryAlias = strtolower((string) ($this->category->alias ?? ''));
+					$isProjectsCategory = in_array($categoryAlias, ['projects', 'projects-ru', 'projects-en', 'projects-by'], true);
+					$allFilterLabel = $isProjectsCategory ? Text::_('TPL_PRASTORA_PROJECTS_FILTER_DRAFT_LAWS') : Text::_('TPL_PRASTORA_PROJECTS_FILTER_ALL');
+					
+					
+					echo '<div class="projects_nav_menu_item' . $allActive . '"><a href="' . Route::_($basePath . $sep . 'type=0') . '"><p>' . htmlspecialchars($allFilterLabel, ENT_QUOTES, 'UTF-8') . '</p></a></div>';
 					if (empty($subcategories)) {
 						$active = ($filterCat === (int) $this->category->id) ? ' projects_nav_menu_item_active' : '';
 						echo '<div class="projects_nav_menu_item' . $active . '"><a href="' . Route::_($basePath . $sep . 'type=' . (int) $this->category->id) . '"><p>' . htmlspecialchars($this->category->title, ENT_QUOTES, 'UTF-8') . '</p></a></div>';

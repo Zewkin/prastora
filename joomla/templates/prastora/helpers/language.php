@@ -148,6 +148,23 @@ if (!function_exists('prastoraRenderLanguageSwitcher')) {
 		echo '</button>';
 		echo '<div class="lang_dropdown" id="' . $uid . '" data-lang-dropdown hidden>';
 
+		// Custom order: Belarusian, English, Russian, then others
+		$orderMap = [
+			'be-BY' => 1,
+			'en-GB' => 2,
+			'ru-RU' => 3,
+		];
+		usort($languages, function ($a, $b) use ($orderMap) {
+			$ac = $a['code'] ?? '';
+			$bc = $b['code'] ?? '';
+			$aw = $orderMap[$ac] ?? 100;
+			$bw = $orderMap[$bc] ?? 100;
+			if ($aw === $bw) {
+				return strcmp($ac, $bc);
+			}
+			return $aw <=> $bw;
+		});
+
 		foreach ($languages as $language) {
 			$optionLabel = prastoraGetLanguageLabel(
 				$language['code'],
@@ -201,4 +218,3 @@ if (!function_exists('prastoraRegisterScriptTranslations')) {
 		}
 	}
 }
-

@@ -321,7 +321,7 @@ if (empty($sections)) {
                 <div class="header_actions">
                   <a href="#"><button class="main_btn"><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_BTN_LEARN_MORE'); ?></button></a>
                   <?php if ($downloadPdfUrl !== '') : ?>
-                  <a href="<?php echo htmlspecialchars($downloadPdfUrl, ENT_QUOTES, 'UTF-8'); ?>" class="main_btn line_btn" target="_blank" rel="noopener" download>
+                  <a href="<?php echo htmlspecialchars($downloadPdfUrl, ENT_QUOTES, 'UTF-8'); ?>" class="main_btn line_btn" target="_blank" rel="noopener">
                       <?php echo Text::_('TPL_PRASTORA_CONSTITUTION_BTN_DOWNLOAD'); ?>
                   </a>
                   <?php endif; ?>
@@ -406,10 +406,6 @@ if (empty($sections)) {
         </div>
         <?php endforeach; ?>
         <?php endforeach; ?>
-        <div class="article_block_info">
-            <img src="<?php echo $tplUri; ?>/assets/icons/arc-info.svg" alt="" />
-            <p><?php echo Text::_('TPL_PRASTORA_CONSTITUTION_INFO_TEXT'); ?></p>
-        </div>
     </div>
 
     <div class="comments_block" data-comments="1" data-article-id="<?php echo (int) $item->id; ?>" data-like-icon="<?php echo $tplUri; ?>/assets/icons/like.svg" data-dislike-icon="<?php echo $tplUri; ?>/assets/icons/dislike.svg" data-reply-icon="<?php echo $tplUri; ?>/assets/icons/comment.svg" data-moderation-mode="<?php echo htmlspecialchars($commentsModerationMode, ENT_QUOTES, 'UTF-8'); ?>" data-captcha-enabled="<?php echo $captchaActive ? '1' : '0'; ?>" data-captcha-mode="<?php echo htmlspecialchars($captchaModeAttribute, ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-sitekey="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaSiteKey : '', ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-badge="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaBadge : '', ENT_QUOTES, 'UTF-8'); ?>" data-recaptcha-locale="<?php echo htmlspecialchars($useInvisibleRecaptcha ? $recaptchaLocale : '', ENT_QUOTES, 'UTF-8'); ?>">
